@@ -9,11 +9,12 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
-// Bullet represents a single shot
+// Bullet represents the location of a single shot
 type Bullet struct {
 	x, y float64
 }
 
+// location of enemy
 type Enemy struct {
 	x, y float64
 }
@@ -29,8 +30,8 @@ type Game struct {
 	enemySpawnTimer float64
 }
 
-// Update handles movement and shooting
-func (g *Game) Update() error {
+// update player movement (spaceship)
+func (g *Game) UpdatePlayer() {
 	// Player movement
 	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
 		g.x -= 2
@@ -44,7 +45,9 @@ func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
 		g.y += 2
 	}
+}
 
+func (g *Game) BulletUpdate() {
 	// **Shooting (Spacebar, one shot per press)**
 	if ebiten.IsKeyPressed(ebiten.KeySpace) && !g.firePressed {
 		g.bullets = append(g.bullets, Bullet{x: g.x + 122, y: g.y + 62})
@@ -54,10 +57,9 @@ func (g *Game) Update() error {
 	for i := range g.bullets {
 		g.bullets[i].x += 5 // Move bullets up
 	}
+}
 
-	newBullets := []Bullet{}
-	newEnemies := []Enemy{}
-
+func (g *Game) CollisionCheck(newBullets []Bullet, newEnemies []Enemy) {
 	for _, b := range g.bullets {
 		hit := false
 
@@ -95,9 +97,18 @@ func (g *Game) Update() error {
 		}
 	}
 	g.enemies = newEnemies
+}
 
+func (g *Game) EnemyMovement() {
+	// Move enemies left
+	for i := range g.enemies {
+		g.enemies[i].x -= 2 // Adjust speed as needed
+	}
+}
+
+func (g *Game) RemoveOffScreenObjects() {
 	// **Remove off-screen bullets**
-	newBullets = g.bullets[:0]
+	newBullets := g.bullets[:0]
 	for _, b := range g.bullets {
 		if b.y > 0 {
 			newBullets = append(newBullets, b)
@@ -105,8 +116,34 @@ func (g *Game) Update() error {
 	}
 	g.bullets = newBullets
 
+	// Remove enemies that move off the screen
+	newEnemies := g.enemies[:0]
+	for _, e := range g.enemies {
+		if e.x < 480 { // Assuming screen height is 480
+			newEnemies = append(newEnemies, e)
+		}
+	}
+	g.enemies = newEnemies
+}
+
+// Update handles movement and shooting
+func (g *Game) Update() error {
+	var (
+		newBullets []Bullet
+		newEnemies []Enemy
+	)
+
+	// update player movement
+	g.UpdatePlayer()
+
+	// check for key press & update bullets
+	g.BulletUpdate()
+
 	// **Track the Space key state**
 	g.firePressed = ebiten.IsKeyPressed(ebiten.KeySpace)
+
+	// Enemy Collision Check
+	g.CollisionCheck(newBullets, newEnemies)
 
 	// Track the current ticks per second
 	tps := ebiten.ActualTPS()
@@ -123,19 +160,11 @@ func (g *Game) Update() error {
 		g.enemySpawnTimer = 0 // Reset the timer
 	}
 
-	// Move enemies left
-	for i := range g.enemies {
-		g.enemies[i].x -= 2 // Adjust speed as needed
-	}
+	// Move Enemys
+	g.EnemyMovement()
 
-	// Remove enemies that move off the screen
-	newEnemies = g.enemies[:0]
-	for _, e := range g.enemies {
-		if e.x < 480 { // Assuming screen height is 480
-			newEnemies = append(newEnemies, e)
-		}
-	}
-	g.enemies = newEnemies
+	// remove off screen bullets and enemys
+	g.RemoveOffScreenObjects()
 
 	return nil
 }
