@@ -72,8 +72,7 @@ func (g *Game) extractPixels() {
 	g.enemyImage.ReadPixels(g.enemyPixels)
 }
 
-func pixelsCollide(x1, y1 int, pixels1 []byte, w1, h1 int,
-	x2, y2 int, pixels2 []byte, w2, h2 int) bool {
+func pixelsCollide(x1, y1 int, pixels1 []byte, w1, h1 int, x2, y2 int, pixels2 []byte, w2, h2 int) bool {
 
 	// Calculate the overlap region
 	xStart := max(x1, x2)
@@ -111,15 +110,14 @@ func (g *Game) CollisionCheck(newBullets []Bullet, newEnemies []Enemy) {
 			e := g.enemies[i]
 
 			// Get player/enemy sprite sizes
-			pw, ph := g.playerImage.Size()
 			ew, eh := g.enemyImage.Size()
 
 			// Pixel-perfect collision between bullet and enemy
-			if pixelsCollide(
-				int(b.x), int(b.y), g.playerPixels, pw, ph,
-				int(e.x), int(e.y), g.enemyPixels, ew, eh,
-			) {
+			if b.x+4 > e.x && b.x < e.x+float64(ew) &&
+				b.y+2 > e.y && b.y < e.y+float64(eh) {
+
 				hit = true
+				log.Printf("Hit detected at Bullet(%v, %v) and Enemy(%v, %v)", b.x, b.y, e.x, e.y)
 				g.enemies = append(g.enemies[:i], g.enemies[i+1:]...)
 				break
 			}
@@ -226,6 +224,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, b := range g.bullets {
 		ebitenutil.DrawRect(screen, b.x, b.y, 4, 2, color.RGBA{255, 255, 0, 255})
 	}
+
 }
 
 // Layout sets the game window size
