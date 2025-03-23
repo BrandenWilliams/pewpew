@@ -72,29 +72,29 @@ func (g *Game) extractPixels() {
 	g.enemyImage.ReadPixels(g.enemyPixels)
 }
 
-func pixelsCollide(x1, y1 int, pixels1 []byte, w1, h1 int, x2, y2 int, pixels2 []byte, w2, h2 int) bool {
+func pixelsCollide(bulletX, bulletY, bulletWidth, bulletHeight int,
+	enemyX, enemyY, enemyWidth, enemyHeight int, imgPixels []byte) bool {
 
-	// Calculate the overlap region
-	xStart := max(x1, x2)
-	yStart := max(y1, y2)
-	xEnd := min(x1+w1, x2+w2)
-	yEnd := min(y1+h1, y2+h2)
+	// Define the overlapping rectangle
+	xStart := max(bulletX, enemyX)
+	yStart := max(bulletY, enemyY)
+	xEnd := min(bulletX+bulletWidth, enemyX+enemyWidth-1)
+	yEnd := min(bulletY+bulletHeight, enemyY+enemyHeight-1)
 
-	// If no overlap, bail early
+	// If no overlap, skip checks
 	if xStart >= xEnd || yStart >= yEnd {
 		return false
 	}
 
-	// Check overlapping pixels for transparency
+	// Rewrite / double check the rest
+	// Loop through the overlapping pixels only
 	for y := yStart; y < yEnd; y++ {
 		for x := xStart; x < xEnd; x++ {
-			// Get pixel offsets for both images
-			offset1 := ((y-y1)*w1 + (x - x1)) * 4
-			offset2 := ((y-y2)*w2 + (x - x2)) * 4
+			p1 := ((y-enemyY)*enemyWidth + (x - enemyX)) * 4
 
-			// Check alpha values (4th byte in RGBA) for non-transparent pixels
-			if pixels1[offset1+3] > 0 && pixels2[offset2+3] > 0 {
-				return true // Collision detected!
+			// Check alpha channel for solidity (>= 128)
+			if imgPixels[p1+3] >= 128 {
+				return true
 			}
 		}
 	}
@@ -102,6 +102,16 @@ func pixelsCollide(x1, y1 int, pixels1 []byte, w1, h1 int, x2, y2 int, pixels2 [
 	return false
 }
 
+/*
+func pixelsCollide(bulletX, bulletY, bulletWidth1, bulletHeight1 int,
+
+		enemyX, enemyY int, pixels2 []byte, enemyW, enemyH int) bool {
+
+
+
+		return false
+	}
+*/
 func (g *Game) CollisionCheck(newBullets []Bullet, newEnemies []Enemy) {
 	for _, b := range g.bullets {
 		hit := false
@@ -109,20 +119,33 @@ func (g *Game) CollisionCheck(newBullets []Bullet, newEnemies []Enemy) {
 		for i := 0; i < len(g.enemies); i++ {
 			e := g.enemies[i]
 
-			// Get player/enemy sprite sizes
+			// Get enemy sprite size
 			ew, eh := g.enemyImage.Size()
 
-			// Pixel-perfect collision between bullet and enemy
+			// First, do a bounding box check for early rejection
 			if b.x+4 > e.x && b.x < e.x+float64(ew) &&
 				b.y+2 > e.y && b.y < e.y+float64(eh) {
 
-				hit = true
-				log.Printf("Hit detected at Bullet(%v, %v) and Enemy(%v, %v)", b.x, b.y, e.x, e.y)
-				g.enemies = append(g.enemies[:i], g.enemies[i+1:]...)
-				break
+				// Convert float positions to integers for pixel collision check
+				bulletX := int(b.x)
+				bulletY := int(b.y)
+				enemyX := int(e.x)
+				enemyY := int(e.y)
+
+				// Call pixel-perfect collision detection
+				if pixelsCollide(
+					bulletX, bulletY, 4, 2,
+					enemyX, enemyY, ew, eh, g.enemyPixels,
+				) {
+					hit = true
+					log.Printf("Pixel-perfect hit detected at Bullet(%v, %v) and Enemy(%v, %v)", b.x, b.y, e.x, e.y)
+					g.enemies = append(g.enemies[:i], g.enemies[i+1:]...)
+					break
+				}
 			}
 		}
 
+		// Keep the bullet if no hit occurred
 		if !hit {
 			newBullets = append(newBullets, b)
 		}
