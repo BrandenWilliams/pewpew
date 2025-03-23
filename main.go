@@ -27,6 +27,7 @@ type Game struct {
 	enemyImage      *ebiten.Image
 	enemyPixels     []byte
 	bullets         []Bullet
+	enemyBullets    []Bullet
 	enemies         []Enemy
 	x, y            float64
 	firePressed     bool // Track fire key state
@@ -102,17 +103,9 @@ func pixelsCollide(bulletX, bulletY, bulletWidth, bulletHeight int,
 	return false
 }
 
-/*
-func pixelsCollide(bulletX, bulletY, bulletWidth1, bulletHeight1 int,
+func (g *Game) CollisionCheck() {
+	var newBullets []Bullet
 
-		enemyX, enemyY int, pixels2 []byte, enemyW, enemyH int) bool {
-
-
-
-		return false
-	}
-*/
-func (g *Game) CollisionCheck(newBullets []Bullet, newEnemies []Enemy) {
 	for _, b := range g.bullets {
 		hit := false
 
@@ -138,7 +131,6 @@ func (g *Game) CollisionCheck(newBullets []Bullet, newEnemies []Enemy) {
 					enemyX, enemyY, ew, eh, g.enemyPixels,
 				) {
 					hit = true
-					log.Printf("Pixel-perfect hit detected at Bullet(%v, %v) and Enemy(%v, %v)", b.x, b.y, e.x, e.y)
 					g.enemies = append(g.enemies[:i], g.enemies[i+1:]...)
 					break
 				}
@@ -154,6 +146,43 @@ func (g *Game) CollisionCheck(newBullets []Bullet, newEnemies []Enemy) {
 	g.bullets = newBullets
 }
 
+func (g *Game) PlayerCollisionCheck() {
+	var newEnemyBullets []Bullet
+	// Get enemy sprite size
+	ew, eh := g.playerImage.Size()
+
+	for _, b := range g.enemyBullets {
+		hit := false
+
+		// First, do a bounding box check for early rejection
+		if b.x+4 > g.x && b.x < g.x+float64(ew) &&
+			b.y+2 > g.y && b.y+2 < g.y+float64(eh) {
+
+			// Convert float positions to integers for pixel collision check
+			bulletX := int(b.x)
+			bulletY := int(b.y)
+			playerX := int(g.x)
+			playerY := int(g.y)
+
+			// Call pixel-perfect collision detection
+			if pixelsCollide(
+				bulletX, bulletY, 4, 2,
+				playerX, playerY, ew, eh, g.playerPixels,
+			) {
+				hit = true
+				log.Println("you have been hit")
+			}
+		}
+
+		// Keep the bullet if no hit occurred
+		if !hit {
+			newEnemyBullets = append(newEnemyBullets, b)
+		}
+	}
+
+	g.enemyBullets = newEnemyBullets
+}
+
 func (g *Game) EnemyMovement() {
 	// Move enemies left
 	for i := range g.enemies {
@@ -161,8 +190,25 @@ func (g *Game) EnemyMovement() {
 	}
 }
 
+func (g *Game) EnemyBullets() {
+	// Make each enemy fire a bullet every 2 seconds (adjust as needed)
+	for _, e := range g.enemies {
+		if rand.Float64() < 0.02 { // ~2% chance per frame
+			var newBullet Bullet
+			newBullet.x = e.x
+			newBullet.y = e.y
+			g.enemyBullets = append(g.enemyBullets, Bullet{x: e.x, y: e.y + 16})
+		}
+	}
+
+	// move bullets
+	for i := range g.enemyBullets {
+		g.enemyBullets[i].x -= 4
+	}
+}
+
 func (g *Game) RemoveOffScreenObjects() {
-	// **Remove off-screen bullets**
+	// **Remove off-screen player bullets**
 	newBullets := g.bullets[:0]
 	for _, b := range g.bullets {
 		if b.y > 0 {
@@ -179,6 +225,16 @@ func (g *Game) RemoveOffScreenObjects() {
 		}
 	}
 	g.enemies = newEnemies
+
+	// remove enemy bullets that are off screen
+	newEnemyBullets := g.enemyBullets[:0]
+	for _, eb := range g.enemyBullets {
+		if eb.x > 0 {
+			newEnemyBullets = append(newEnemyBullets, eb)
+		}
+	}
+	g.enemyBullets = newEnemyBullets
+
 }
 
 // Update handles movement and shooting
@@ -187,11 +243,6 @@ func (g *Game) Update() error {
 		g.extractPixels()
 		g.hadFirstUpdate = true
 	}
-
-	var (
-		newBullets []Bullet
-		newEnemies []Enemy
-	)
 
 	// update player movement
 	g.UpdatePlayer()
@@ -203,7 +254,10 @@ func (g *Game) Update() error {
 	g.firePressed = ebiten.IsKeyPressed(ebiten.KeySpace)
 
 	// Enemy Collision Check
-	g.CollisionCheck(newBullets, newEnemies)
+	g.CollisionCheck()
+
+	// Check Player Collisions
+	g.PlayerCollisionCheck()
 
 	// Track the current ticks per second
 	tps := ebiten.ActualTPS()
@@ -222,6 +276,8 @@ func (g *Game) Update() error {
 
 	// Move Enemys
 	g.EnemyMovement()
+
+	g.EnemyBullets()
 
 	// remove off screen bullets and enemys
 	g.RemoveOffScreenObjects()
@@ -246,6 +302,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Draw bullets
 	for _, b := range g.bullets {
 		ebitenutil.DrawRect(screen, b.x, b.y, 4, 2, color.RGBA{255, 255, 0, 255})
+	}
+
+	// draw enemy bullets
+	for _, eb := range g.enemyBullets {
+		ebitenutil.DrawRect(screen, eb.x, eb.y, 4, 2, color.RGBA{255, 0, 0, 255})
 	}
 
 }
