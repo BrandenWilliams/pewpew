@@ -169,7 +169,7 @@ func main() {
 	// Load sprites
 
 	// player sprite
-	playerImg, _, err := ebitenutil.NewImageFromFile("art/testship.png")
+	playerImg, _, err := ebitenutil.NewImageFromFile("art/playership.png")
 	if err != nil {
 		log.Fatal(err)
 	}
