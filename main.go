@@ -9,6 +9,13 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
+const (
+	ScreenWidth   = 640
+	ScreenHight   = 480
+	PlayerShipURL = "art/playership.png"
+	EnemyShipURL  = "art/enemyship.png"
+)
+
 // Bullet represents the location of a single shot
 type Bullet struct {
 	x, y float64
@@ -330,32 +337,36 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 // Layout sets the game window size
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return 640, 480
+	return ScreenWidth, ScreenHight
 }
 
 func main() {
 	// Load sprites
 
 	// player sprite
-	playerImg, _, err := ebitenutil.NewImageFromFile("art/playership.png")
+	playerImg, _, err := ebitenutil.NewImageFromFile(PlayerShipURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// enemy sprite
-	enemyImg, _, err := ebitenutil.NewImageFromFile("art/enemyship.png")
+	enemyImg, _, err := ebitenutil.NewImageFromFile(EnemyShipURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	centerPlayer := (ScreenHight / 2) - playerImg.Bounds().Dy()/2
+
 	game := &Game{
 		playerImage: playerImg,
 		enemyImage:  enemyImg,
-		x:           320,
-		y:           240,
+		x:           50,
+		y:           float64(centerPlayer),
 	}
 
-	ebiten.SetWindowSize(640, 480)
+	log.Printf("test y:%v", game.y)
+
+	ebiten.SetWindowSize(ScreenWidth, ScreenHight)
 	ebiten.SetWindowTitle("pewpew v0.0.1")
 
 	if err := ebiten.RunGame(game); err != nil {
