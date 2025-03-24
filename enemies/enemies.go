@@ -103,18 +103,18 @@ func (e *Enemies) EnemyMovement() {
 
 func (e *Enemies) EnemyBullets() {
 	// Make each enemy fire a bullet every 2 seconds (adjust as needed)
-	for _, s := range e.ES {
+	for i := range e.ES {
 
 		if rand.Float64() < 0.02 { // ~2% chance per frame
-			s.EnemyBullets = append(s.EnemyBullets, Bullet{X: s.X, Y: s.Y + 16})
+			e.ES[i].EnemyBullets = append(e.ES[i].EnemyBullets, Bullet{X: e.ES[i].X, Y: e.ES[i].Y + 16})
 		}
 
 	}
 
 	// move bullets
-	for _, es := range e.ES {
-		for _, bs := range es.EnemyBullets {
-			bs.X -= 2
+	for i := range e.ES {
+		for j := range e.ES[i].EnemyBullets {
+			e.ES[i].EnemyBullets[j].X -= 3
 		}
 	}
 }

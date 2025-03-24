@@ -32,10 +32,8 @@ type Game struct {
 	enemies   enemies.Enemies
 	enemyType enemies.EnemyType
 
-	x, y              float64
-	firePressed       bool // Track fire key state
-	enemySpawnTimer   float64
-	initialSpawnDelay float64
+	x, y        float64
+	firePressed bool // Track fire key state
 }
 
 // update player movement (spaceship)
@@ -88,8 +86,6 @@ func (g *Game) extractPixels() {
 	g.enemyType.EnemyPixels = make([]byte, 4*EnemyPoint.X*EnemyPoint.Y)
 	newEnemyType.Image.ReadPixels(g.enemyType.EnemyPixels)
 }
-
-// CRASH ON COLLIDE
 
 // bullet x, y, bullet width, bullet hieght, enemy X posision, enemy Y Posision, enemy width, enemy height and image pixels
 func pixelsCollide(bulletX, bulletY, bulletWidth, bulletHeight int,
