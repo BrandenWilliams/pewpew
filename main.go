@@ -201,6 +201,41 @@ func (g *Game) PlayerCollisionCheck() {
 	g.enemyBullets = newEnemyBullets
 }
 
+// long term make this support all enemys
+func CreateEnemyLocation(enemyWidth, enemyHeight int) (el Enemy) {
+	var newLocation Enemy
+	// newLocation.x = float64(ScreenWidth - enemyWidth)
+	newLocation.x = ScreenWidth - 1
+	newLocation.y = float64(rand.Intn(ScreenHight - enemyHeight))
+	el = newLocation
+	return
+}
+
+func (g *Game) EnemySpawn() {
+	tps := ebiten.ActualTPS()
+
+	// Ensure TPS is valid (avoid dividing by zero)
+	if tps == 0 {
+		tps = 60
+	}
+
+	// Start a delay before first wave
+	if g.enemySpawnTimer < g.initialSpawnDelay {
+		g.enemySpawnTimer += 1 / tps
+		return
+	}
+
+	// Increment timer after the initial delay
+	g.enemySpawnTimer += 1 / tps
+
+	// Spawn a new enemy every 1.5 seconds
+	spawnInterval := 1.5
+	if g.enemySpawnTimer >= spawnInterval {
+		g.enemies = append(g.enemies, CreateEnemyLocation(g.enemyImage.Bounds().Dx(), g.enemyImage.Bounds().Size().Y))
+		g.enemySpawnTimer -= spawnInterval // Subtract instead of resetting to 0
+	}
+}
+
 func (g *Game) EnemyMovement() {
 	// Move enemies left
 	for i := range g.enemies {
@@ -286,41 +321,6 @@ func (g *Game) Update() error {
 	g.RemoveOffScreenObjects()
 
 	return nil
-}
-
-// long term make this support all enemys
-func CreateEnemyLocation(enemyWidth, enemyHeight int) (el Enemy) {
-	var newLocation Enemy
-	// newLocation.x = float64(ScreenWidth - enemyWidth)
-	newLocation.x = ScreenWidth - 1
-	newLocation.y = float64(rand.Intn(ScreenHight - enemyHeight))
-	el = newLocation
-	return
-}
-
-func (g *Game) EnemySpawn() {
-	tps := ebiten.ActualTPS()
-
-	// Ensure TPS is valid (avoid dividing by zero)
-	if tps == 0 {
-		tps = 60
-	}
-
-	// Start a delay before first wave
-	if g.enemySpawnTimer < g.initialSpawnDelay {
-		g.enemySpawnTimer += 1 / tps
-		return
-	}
-
-	// Increment timer after the initial delay
-	g.enemySpawnTimer += 1 / tps
-
-	// Spawn a new enemy every 1.5 seconds
-	spawnInterval := 1.5
-	if g.enemySpawnTimer >= spawnInterval {
-		g.enemies = append(g.enemies, CreateEnemyLocation(g.enemyImage.Bounds().Dx(), g.enemyImage.Bounds().Size().Y))
-		g.enemySpawnTimer -= spawnInterval // Subtract instead of resetting to 0
-	}
 }
 
 // Draw the player and bullets
