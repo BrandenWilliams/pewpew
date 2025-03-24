@@ -3,8 +3,8 @@ package main
 import (
 	"image/color"
 	"log"
-	"math/rand"
 
+	"github.com/BrandenWilliams/pewpew/enemies"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
@@ -21,21 +21,17 @@ type Bullet struct {
 	x, y float64
 }
 
-// location of enemy
-type Enemy struct {
-	x, y float64
-}
-
 // Game holds the player, bullets, and player position
 type Game struct {
-	hadFirstUpdate    bool
-	playerImage       *ebiten.Image
-	playerPixels      []byte
-	enemyImage        *ebiten.Image
-	enemyPixels       []byte
-	bullets           []Bullet
-	enemyBullets      []Bullet
-	enemies           []Enemy
+	hadFirstUpdate bool
+	playerImage    *ebiten.Image
+	playerPixels   []byte
+
+	bullets []Bullet
+
+	enemies   enemies.Enemies
+	enemyType enemies.EnemyType
+
 	x, y              float64
 	firePressed       bool // Track fire key state
 	enemySpawnTimer   float64
@@ -87,11 +83,15 @@ func (g *Game) extractPixels() {
 	g.playerPixels = make([]byte, 4*playerPoint.X*playerPoint.Y)
 	g.playerImage.ReadPixels(g.playerPixels)
 
-	EnemyPoint := g.enemyImage.Bounds().Size()
-	g.enemyPixels = make([]byte, 4*EnemyPoint.X*EnemyPoint.Y)
-	g.enemyImage.ReadPixels(g.enemyPixels)
+	newEnemyType := g.enemyType.TypeOne()
+	EnemyPoint := newEnemyType.Image.Bounds().Size()
+	g.enemyType.EnemyPixels = make([]byte, 4*EnemyPoint.X*EnemyPoint.Y)
+	newEnemyType.Image.ReadPixels(g.enemyType.EnemyPixels)
 }
 
+// CRASH ON COLLIDE
+
+// bullet x, y, bullet width, bullet hieght, enemy X posision, enemy Y Posision, enemy width, enemy height and image pixels
 func pixelsCollide(bulletX, bulletY, bulletWidth, bulletHeight int,
 	enemyX, enemyY, enemyWidth, enemyHeight int, imgPixels []byte) bool {
 
@@ -128,29 +128,29 @@ func (g *Game) CollisionCheck() {
 	for _, b := range g.bullets {
 		hit := false
 
-		for i := 0; i < len(g.enemies); i++ {
-			e := g.enemies[i]
+		for i := 0; i < len(g.enemies.ES); i++ {
+			e := g.enemies.ES[i]
 
 			// Get enemy sprite size
-			ew, eh := g.enemyImage.Size()
+			ew, eh := g.enemies.ES[i].EnemyImage.Size()
 
 			// First, do a bounding box check for early rejection
-			if b.x+4 > e.x && b.x < e.x+float64(ew) &&
-				b.y+2 > e.y && b.y < e.y+float64(eh) {
+			if b.x+4 > e.X && b.x < e.X+float64(ew) &&
+				b.y+2 > e.Y && b.y < e.Y+float64(eh) {
 
 				// Convert float positions to integers for pixel collision check
 				bulletX := int(b.x)
 				bulletY := int(b.y)
-				enemyX := int(e.x)
-				enemyY := int(e.y)
+				enemyX := int(e.X)
+				enemyY := int(e.Y)
 
 				// Call pixel-perfect collision detection
 				if pixelsCollide(
 					bulletX, bulletY, 4, 2,
-					enemyX, enemyY, ew, eh, g.enemyPixels,
+					enemyX, enemyY, ew, eh, g.enemies.ES[i].EnemyPixels,
 				) {
 					hit = true
-					g.enemies = append(g.enemies[:i], g.enemies[i+1:]...)
+					g.enemies.ES = append(g.enemies.ES[:i], g.enemies.ES[i+1:]...)
 					break
 				}
 			}
@@ -166,95 +166,56 @@ func (g *Game) CollisionCheck() {
 }
 
 func (g *Game) PlayerCollisionCheck() {
-	var newEnemyBullets []Bullet
+	var newEnemyBullets []enemies.Bullet
 	// Get enemy sprite size
 	ew, eh := g.playerImage.Size()
 
-	for _, b := range g.enemyBullets {
-		hit := false
+	// must iterate through all enmies now that bullets are within enemys
+	for _, e := range g.enemies.ES {
 
-		// First, do a bounding box check for early rejection
-		if b.x+4 > g.x && b.x < g.x+float64(ew) &&
-			b.y+2 > g.y && b.y+2 < g.y+float64(eh) {
+		for _, b := range e.EnemyBullets {
+			hit := false
 
-			// Convert float positions to integers for pixel collision check
-			bulletX := int(b.x)
-			bulletY := int(b.y)
-			playerX := int(g.x)
-			playerY := int(g.y)
+			// First, do a bounding box check for early rejection
+			if b.X+4 > g.x && b.X < g.x+float64(ew) &&
+				b.Y+2 > g.y && b.Y+2 < g.y+float64(eh) {
 
-			// Call pixel-perfect collision detection
-			if pixelsCollide(
-				bulletX, bulletY, 4, 2,
-				playerX, playerY, ew, eh, g.playerPixels,
-			) {
-				hit = true
+				// Convert float positions to integers for pixel collision check
+				bulletX := int(b.X)
+				bulletY := int(b.Y)
+				playerX := int(g.x)
+				playerY := int(g.y)
+
+				// Call pixel-perfect collision detection
+				if pixelsCollide(
+					bulletX, bulletY, 4, 2,
+					playerX, playerY, ew, eh, g.playerPixels,
+				) {
+					hit = true
+				}
+			}
+
+			// Keep the bullet if no hit occurred
+			if !hit {
+				newEnemyBullets = append(newEnemyBullets, b)
 			}
 		}
+		e.EnemyBullets = newEnemyBullets
+	}
+}
 
-		// Keep the bullet if no hit occurred
-		if !hit {
-			newEnemyBullets = append(newEnemyBullets, b)
+func (g *Game) removeEnemyBullets(oeb []enemies.Bullet) (neb []enemies.Bullet) {
+	// remove enemy bullets that are off screen
+	newEnemyBullets := oeb[:0]
+	for _, eb := range oeb {
+		if eb.X > 0 {
+			newEnemyBullets = append(newEnemyBullets, eb)
 		}
 	}
 
-	g.enemyBullets = newEnemyBullets
-}
+	neb = newEnemyBullets
 
-// long term make this support all enemys
-func CreateEnemyLocation(enemyWidth, enemyHeight int) (el Enemy) {
-	var newLocation Enemy
-	// newLocation.x = float64(ScreenWidth - enemyWidth)
-	newLocation.x = ScreenWidth - 1
-	newLocation.y = float64(rand.Intn(ScreenHight - enemyHeight))
-	el = newLocation
 	return
-}
-
-func (g *Game) EnemySpawn() {
-	tps := ebiten.ActualTPS()
-
-	// Ensure TPS is valid (avoid dividing by zero)
-	if tps == 0 {
-		tps = 60
-	}
-
-	// Start a delay before first wave
-	if g.enemySpawnTimer < g.initialSpawnDelay {
-		g.enemySpawnTimer += 1 / tps
-		return
-	}
-
-	// Increment timer after the initial delay
-	g.enemySpawnTimer += 1 / tps
-
-	// Spawn a new enemy every 1.5 seconds
-	spawnInterval := 1.5
-	if g.enemySpawnTimer >= spawnInterval {
-		g.enemies = append(g.enemies, CreateEnemyLocation(g.enemyImage.Bounds().Dx(), g.enemyImage.Bounds().Size().Y))
-		g.enemySpawnTimer -= spawnInterval // Subtract instead of resetting to 0
-	}
-}
-
-func (g *Game) EnemyMovement() {
-	// Move enemies left
-	for i := range g.enemies {
-		g.enemies[i].x -= 2 // Adjust speed as needed
-	}
-}
-
-func (g *Game) EnemyBullets() {
-	// Make each enemy fire a bullet every 2 seconds (adjust as needed)
-	for _, e := range g.enemies {
-		if rand.Float64() < 0.02 { // ~2% chance per frame
-			g.enemyBullets = append(g.enemyBullets, Bullet{x: e.x, y: e.y + 16})
-		}
-	}
-
-	// move bullets
-	for i := range g.enemyBullets {
-		g.enemyBullets[i].x -= 4
-	}
 }
 
 func (g *Game) RemoveOffScreenObjects() {
@@ -268,22 +229,14 @@ func (g *Game) RemoveOffScreenObjects() {
 	g.bullets = newBullets
 
 	// Remove enemies that move off the screen
-	newEnemies := g.enemies[:0]
-	for _, e := range g.enemies {
-		if e.x < ScreenWidth {
+	newEnemies := g.enemies.ES[:0]
+	for _, e := range g.enemies.ES {
+		if e.X < ScreenWidth {
+			e.EnemyBullets = g.removeEnemyBullets(e.EnemyBullets)
 			newEnemies = append(newEnemies, e)
 		}
 	}
-	g.enemies = newEnemies
-
-	// remove enemy bullets that are off screen
-	newEnemyBullets := g.enemyBullets[:0]
-	for _, eb := range g.enemyBullets {
-		if eb.x > 0 {
-			newEnemyBullets = append(newEnemyBullets, eb)
-		}
-	}
-	g.enemyBullets = newEnemyBullets
+	g.enemies.ES = newEnemies
 
 }
 
@@ -310,12 +263,12 @@ func (g *Game) Update() error {
 	g.PlayerCollisionCheck()
 
 	// Enemy spawn management
-	g.EnemySpawn()
+	g.enemies.EnemySpawn()
 
 	// Move Enemys
-	g.EnemyMovement()
+	g.enemies.EnemyMovement()
 
-	g.EnemyBullets()
+	g.enemies.EnemyBullets()
 
 	// remove off screen bullets and enemys
 	g.RemoveOffScreenObjects()
@@ -331,10 +284,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.DrawImage(g.playerImage, playerOp)
 
 	// Draw enemy sprite
-	for _, e := range g.enemies {
+	for _, e := range g.enemies.ES {
 		enemyOp := &ebiten.DrawImageOptions{}
-		enemyOp.GeoM.Translate(e.x, e.y)
-		screen.DrawImage(g.enemyImage, enemyOp)
+		enemyOp.GeoM.Translate(e.X, e.Y)
+		screen.DrawImage(e.EnemyImage, enemyOp)
 	}
 
 	// Draw bullets
@@ -343,8 +296,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	// draw enemy bullets
-	for _, eb := range g.enemyBullets {
-		ebitenutil.DrawRect(screen, eb.x, eb.y, 4, 2, color.RGBA{255, 0, 0, 255})
+	for _, e := range g.enemies.ES {
+		for _, eb := range e.EnemyBullets {
+			ebitenutil.DrawRect(screen, eb.X, eb.Y, 4, 2, color.RGBA{255, 0, 0, 255})
+		}
 	}
 
 }
@@ -363,17 +318,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// enemy sprite
-	enemyImg, _, err := ebitenutil.NewImageFromFile(EnemyShipURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	centerPlayer := (ScreenHight / 2) - playerImg.Bounds().Dy()/2
 
 	game := &Game{
 		playerImage: playerImg,
-		enemyImage:  enemyImg,
 		x:           50,
 		y:           float64(centerPlayer),
 	}
