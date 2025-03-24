@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	ScreenWidth   = 640
-	ScreenHight   = 480
+	ScreenWidth   = 960
+	ScreenHight   = 540
 	PlayerShipURL = "art/playership.png"
 	EnemyShipURL  = "art/enemyship.png"
 )
@@ -46,16 +46,27 @@ type Game struct {
 func (g *Game) UpdatePlayer() {
 	// Player movement
 	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-		g.x -= 2
+		if g.x > 0 {
+			g.x -= 2
+		}
 	}
+
 	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-		g.x += 2
+		if g.x < float64(ScreenWidth-g.playerImage.Bounds().Dx()-50) {
+			g.x += 2
+		}
 	}
+
 	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
-		g.y -= 2
+		if g.y > 0 {
+			g.y -= 2
+		}
 	}
+
 	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
-		g.y += 2
+		if g.y < float64(ScreenHight-g.playerImage.Bounds().Dy()) {
+			g.y += 2
+		}
 	}
 }
 
@@ -178,7 +189,6 @@ func (g *Game) PlayerCollisionCheck() {
 				playerX, playerY, ew, eh, g.playerPixels,
 			) {
 				hit = true
-				log.Println("you have been hit")
 			}
 		}
 
@@ -189,6 +199,41 @@ func (g *Game) PlayerCollisionCheck() {
 	}
 
 	g.enemyBullets = newEnemyBullets
+}
+
+// long term make this support all enemys
+func CreateEnemyLocation(enemyWidth, enemyHeight int) (el Enemy) {
+	var newLocation Enemy
+	// newLocation.x = float64(ScreenWidth - enemyWidth)
+	newLocation.x = ScreenWidth - 1
+	newLocation.y = float64(rand.Intn(ScreenHight - enemyHeight))
+	el = newLocation
+	return
+}
+
+func (g *Game) EnemySpawn() {
+	tps := ebiten.ActualTPS()
+
+	// Ensure TPS is valid (avoid dividing by zero)
+	if tps == 0 {
+		tps = 60
+	}
+
+	// Start a delay before first wave
+	if g.enemySpawnTimer < g.initialSpawnDelay {
+		g.enemySpawnTimer += 1 / tps
+		return
+	}
+
+	// Increment timer after the initial delay
+	g.enemySpawnTimer += 1 / tps
+
+	// Spawn a new enemy every 1.5 seconds
+	spawnInterval := 1.5
+	if g.enemySpawnTimer >= spawnInterval {
+		g.enemies = append(g.enemies, CreateEnemyLocation(g.enemyImage.Bounds().Dx(), g.enemyImage.Bounds().Size().Y))
+		g.enemySpawnTimer -= spawnInterval // Subtract instead of resetting to 0
+	}
 }
 
 func (g *Game) EnemyMovement() {
@@ -202,9 +247,6 @@ func (g *Game) EnemyBullets() {
 	// Make each enemy fire a bullet every 2 seconds (adjust as needed)
 	for _, e := range g.enemies {
 		if rand.Float64() < 0.02 { // ~2% chance per frame
-			var newBullet Bullet
-			newBullet.x = e.x
-			newBullet.y = e.y
 			g.enemyBullets = append(g.enemyBullets, Bullet{x: e.x, y: e.y + 16})
 		}
 	}
@@ -216,7 +258,7 @@ func (g *Game) EnemyBullets() {
 }
 
 func (g *Game) RemoveOffScreenObjects() {
-	// **Remove off-screen player bullets**
+	// **Remove off-screen player bullets** NEEDS TO BE REDONE
 	newBullets := g.bullets[:0]
 	for _, b := range g.bullets {
 		if b.y > 0 {
@@ -228,7 +270,7 @@ func (g *Game) RemoveOffScreenObjects() {
 	// Remove enemies that move off the screen
 	newEnemies := g.enemies[:0]
 	for _, e := range g.enemies {
-		if e.x < 480 { // Assuming screen height is 480
+		if e.x < ScreenWidth {
 			newEnemies = append(newEnemies, e)
 		}
 	}
@@ -279,34 +321,6 @@ func (g *Game) Update() error {
 	g.RemoveOffScreenObjects()
 
 	return nil
-}
-
-func (g *Game) EnemySpawn() {
-	tps := ebiten.ActualTPS()
-
-	// Ensure TPS is valid (avoid dividing by zero)
-	if tps == 0 {
-		tps = 60
-	}
-
-	// Start a delay before first wave
-	if g.enemySpawnTimer < g.initialSpawnDelay {
-		g.enemySpawnTimer += 1 / tps
-		return
-	}
-
-	// Increment timer after the initial delay
-	g.enemySpawnTimer += 1 / tps
-
-	// Spawn a new enemy every 1.5 seconds
-	spawnInterval := 1.5
-	if g.enemySpawnTimer >= spawnInterval {
-		g.enemies = append(g.enemies, Enemy{
-			y: float64(50 + rand.Intn(480)),
-			x: 480,
-		})
-		g.enemySpawnTimer -= spawnInterval // Subtract instead of resetting to 0
-	}
 }
 
 // Draw the player and bullets
@@ -363,8 +377,6 @@ func main() {
 		x:           50,
 		y:           float64(centerPlayer),
 	}
-
-	log.Printf("test y:%v", game.y)
 
 	ebiten.SetWindowSize(ScreenWidth, ScreenHight)
 	ebiten.SetWindowTitle("pewpew v0.0.1")
