@@ -167,37 +167,35 @@ func (g *Game) PlayerCollisionCheck() {
 	ew, eh := g.playerImage.Size()
 
 	// must iterate through all enmies now that bullets are within enemys
-	for _, e := range g.enemies.ES {
+	for _, b := range g.enemies.EnemyBullets {
+		hit := false
 
-		for _, b := range e.EnemyBullets {
-			hit := false
+		// First, do a bounding box check for early rejection
+		if b.X+4 > g.x && b.X < g.x+float64(ew) &&
+			b.Y+2 > g.y && b.Y+2 < g.y+float64(eh) {
 
-			// First, do a bounding box check for early rejection
-			if b.X+4 > g.x && b.X < g.x+float64(ew) &&
-				b.Y+2 > g.y && b.Y+2 < g.y+float64(eh) {
+			// Convert float positions to integers for pixel collision check
+			bulletX := int(b.X)
+			bulletY := int(b.Y)
+			playerX := int(g.x)
+			playerY := int(g.y)
 
-				// Convert float positions to integers for pixel collision check
-				bulletX := int(b.X)
-				bulletY := int(b.Y)
-				playerX := int(g.x)
-				playerY := int(g.y)
-
-				// Call pixel-perfect collision detection
-				if pixelsCollide(
-					bulletX, bulletY, 4, 2,
-					playerX, playerY, ew, eh, g.playerPixels,
-				) {
-					hit = true
-				}
-			}
-
-			// Keep the bullet if no hit occurred
-			if !hit {
-				newEnemyBullets = append(newEnemyBullets, b)
+			// Call pixel-perfect collision detection
+			if pixelsCollide(
+				bulletX, bulletY, 4, 2,
+				playerX, playerY, ew, eh, g.playerPixels,
+			) {
+				hit = true
 			}
 		}
-		e.EnemyBullets = newEnemyBullets
+
+		// Keep the bullet if no hit occurred
+		if !hit {
+			newEnemyBullets = append(newEnemyBullets, b)
+		}
 	}
+
+	g.enemies.EnemyBullets = newEnemyBullets
 }
 
 func (g *Game) removeEnemyBullets(oeb []enemies.Bullet) (neb []enemies.Bullet) {
@@ -228,7 +226,7 @@ func (g *Game) RemoveOffScreenObjects() {
 	newEnemies := g.enemies.ES[:0]
 	for _, e := range g.enemies.ES {
 		if e.X < ScreenWidth {
-			e.EnemyBullets = g.removeEnemyBullets(e.EnemyBullets)
+			g.enemies.EnemyBullets = g.removeEnemyBullets(g.enemies.EnemyBullets)
 			newEnemies = append(newEnemies, e)
 		}
 	}
@@ -264,7 +262,7 @@ func (g *Game) Update() error {
 	// Move Enemys
 	g.enemies.EnemyMovement()
 
-	g.enemies.EnemyBullets()
+	g.enemies.ManageEnemyBullets()
 
 	// remove off screen bullets and enemys
 	g.RemoveOffScreenObjects()
@@ -292,10 +290,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	// draw enemy bullets
-	for _, e := range g.enemies.ES {
-		for _, eb := range e.EnemyBullets {
-			ebitenutil.DrawRect(screen, eb.X, eb.Y, 4, 2, color.RGBA{255, 0, 0, 255})
-		}
+	for _, eb := range g.enemies.EnemyBullets {
+		ebitenutil.DrawRect(screen, eb.X, eb.Y, 4, 2, color.RGBA{255, 0, 0, 255})
 	}
 
 }

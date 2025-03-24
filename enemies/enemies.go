@@ -23,13 +23,14 @@ type Bullet struct {
 type Enemy struct {
 	X, Y float64
 
-	EnemyImage   *ebiten.Image
-	EnemyPixels  []byte
-	EnemyBullets []Bullet
+	EnemyImage  *ebiten.Image
+	EnemyPixels []byte
 }
 
 type Enemies struct {
 	ES []Enemy
+
+	EnemyBullets []Bullet
 
 	enemySpawnTimer   float64
 	initialSpawnDelay float64
@@ -101,20 +102,19 @@ func (e *Enemies) EnemyMovement() {
 	}
 }
 
-func (e *Enemies) EnemyBullets() {
+func (e *Enemies) ManageEnemyBullets() {
 	// Make each enemy fire a bullet every 2 seconds (adjust as needed)
-	for i := range e.ES {
+	for _, enemySlice := range e.ES {
 
 		if rand.Float64() < 0.02 { // ~2% chance per frame
-			e.ES[i].EnemyBullets = append(e.ES[i].EnemyBullets, Bullet{X: e.ES[i].X, Y: e.ES[i].Y + 16})
+
+			e.EnemyBullets = append(e.EnemyBullets, Bullet{X: enemySlice.X, Y: enemySlice.Y + 16})
 		}
 
 	}
 
 	// move bullets
-	for i := range e.ES {
-		for j := range e.ES[i].EnemyBullets {
-			e.ES[i].EnemyBullets[j].X -= 3
-		}
+	for j := range e.EnemyBullets {
+		e.EnemyBullets[j].X -= 3
 	}
 }
