@@ -189,7 +189,6 @@ func (g *Game) PlayerCollisionCheck() {
 				playerX, playerY, ew, eh, g.playerPixels,
 			) {
 				hit = true
-				log.Println("you have been hit")
 			}
 		}
 
@@ -296,7 +295,6 @@ func CreateEnemyLocation(enemyWidth, enemyHeight int) (el Enemy) {
 	newLocation.x = ScreenWidth - 1
 	newLocation.y = float64(rand.Intn(ScreenHight - enemyHeight))
 	el = newLocation
-	log.Printf("el: x: %v y: %v", el.x, el.y)
 	return
 }
 
