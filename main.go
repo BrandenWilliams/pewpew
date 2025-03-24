@@ -236,7 +236,7 @@ func (g *Game) RemoveOffScreenObjects() {
 	// Remove enemies that move off the screen
 	newEnemies := g.enemies[:0]
 	for _, e := range g.enemies {
-		if e.x < ScreenHight {
+		if e.x < ScreenWidth {
 			newEnemies = append(newEnemies, e)
 		}
 	}
@@ -293,8 +293,8 @@ func (g *Game) Update() error {
 func CreateEnemyLocation(enemyWidth, enemyHeight int) (el Enemy) {
 	var newLocation Enemy
 	// newLocation.x = float64(ScreenWidth - enemyWidth)
-	newLocation.x = 480
-	newLocation.y = float64(50 + rand.Intn(ScreenHight-enemyHeight))
+	newLocation.x = ScreenWidth - 1
+	newLocation.y = float64(rand.Intn(ScreenHight - enemyHeight))
 	el = newLocation
 	log.Printf("el: x: %v y: %v", el.x, el.y)
 	return
