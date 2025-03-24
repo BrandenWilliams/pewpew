@@ -46,16 +46,27 @@ type Game struct {
 func (g *Game) UpdatePlayer() {
 	// Player movement
 	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-		g.x -= 2
+		if g.x > 0 {
+			g.x -= 2
+		}
 	}
+
 	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-		g.x += 2
+		if g.x < float64(ScreenWidth-g.playerImage.Bounds().Dx()-50) {
+			g.x += 2
+		}
 	}
+
 	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
-		g.y -= 2
+		if g.y > 0 {
+			g.y -= 2
+		}
 	}
+
 	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
-		g.y += 2
+		if g.y < float64(ScreenHight-g.playerImage.Bounds().Dy()) {
+			g.y += 2
+		}
 	}
 }
 
@@ -202,9 +213,6 @@ func (g *Game) EnemyBullets() {
 	// Make each enemy fire a bullet every 2 seconds (adjust as needed)
 	for _, e := range g.enemies {
 		if rand.Float64() < 0.02 { // ~2% chance per frame
-			var newBullet Bullet
-			newBullet.x = e.x
-			newBullet.y = e.y
 			g.enemyBullets = append(g.enemyBullets, Bullet{x: e.x, y: e.y + 16})
 		}
 	}
