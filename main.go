@@ -224,7 +224,7 @@ func (g *Game) EnemyBullets() {
 }
 
 func (g *Game) RemoveOffScreenObjects() {
-	// **Remove off-screen player bullets**
+	// **Remove off-screen player bullets** NEEDS TO BE REDONE
 	newBullets := g.bullets[:0]
 	for _, b := range g.bullets {
 		if b.y > 0 {
@@ -236,7 +236,7 @@ func (g *Game) RemoveOffScreenObjects() {
 	// Remove enemies that move off the screen
 	newEnemies := g.enemies[:0]
 	for _, e := range g.enemies {
-		if e.x < 480 { // Assuming screen height is 480
+		if e.x < ScreenHight {
 			newEnemies = append(newEnemies, e)
 		}
 	}
@@ -289,6 +289,17 @@ func (g *Game) Update() error {
 	return nil
 }
 
+// long term make this support all enemys
+func CreateEnemyLocation(enemyWidth, enemyHeight int) (el Enemy) {
+	var newLocation Enemy
+	// newLocation.x = float64(ScreenWidth - enemyWidth)
+	newLocation.x = 480
+	newLocation.y = float64(50 + rand.Intn(ScreenHight-enemyHeight))
+	el = newLocation
+	log.Printf("el: x: %v y: %v", el.x, el.y)
+	return
+}
+
 func (g *Game) EnemySpawn() {
 	tps := ebiten.ActualTPS()
 
@@ -309,10 +320,7 @@ func (g *Game) EnemySpawn() {
 	// Spawn a new enemy every 1.5 seconds
 	spawnInterval := 1.5
 	if g.enemySpawnTimer >= spawnInterval {
-		g.enemies = append(g.enemies, Enemy{
-			y: float64(50 + rand.Intn(480)),
-			x: 480,
-		})
+		g.enemies = append(g.enemies, CreateEnemyLocation(g.enemyImage.Bounds().Dx(), g.enemyImage.Bounds().Size().Y))
 		g.enemySpawnTimer -= spawnInterval // Subtract instead of resetting to 0
 	}
 }
@@ -371,8 +379,6 @@ func main() {
 		x:           50,
 		y:           float64(centerPlayer),
 	}
-
-	log.Printf("test y:%v", game.y)
 
 	ebiten.SetWindowSize(ScreenWidth, ScreenHight)
 	ebiten.SetWindowTitle("pewpew v0.0.1")
