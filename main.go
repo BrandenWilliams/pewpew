@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	ScreenWidth   = 640
-	ScreenHight   = 480
+	ScreenWidth   = 960
+	ScreenHight   = 540
 	PlayerShipURL = "art/playership.png"
 	EnemyShipURL  = "art/enemyship.png"
 )
