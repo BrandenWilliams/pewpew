@@ -9,6 +9,13 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
+const (
+	ScreenWidth   = 640
+	ScreenHight   = 480
+	PlayerShipURL = "art/playership.png"
+	EnemyShipURL  = "art/enemyship.png"
+)
+
 // Bullet represents the location of a single shot
 type Bullet struct {
 	x, y float64
@@ -21,16 +28,18 @@ type Enemy struct {
 
 // Game holds the player, bullets, and player position
 type Game struct {
-	hadFirstUpdate  bool
-	playerImage     *ebiten.Image
-	playerPixels    []byte
-	enemyImage      *ebiten.Image
-	enemyPixels     []byte
-	bullets         []Bullet
-	enemies         []Enemy
-	x, y            float64
-	firePressed     bool // Track fire key state
-	enemySpawnTimer float64
+	hadFirstUpdate    bool
+	playerImage       *ebiten.Image
+	playerPixels      []byte
+	enemyImage        *ebiten.Image
+	enemyPixels       []byte
+	bullets           []Bullet
+	enemyBullets      []Bullet
+	enemies           []Enemy
+	x, y              float64
+	firePressed       bool // Track fire key state
+	enemySpawnTimer   float64
+	initialSpawnDelay float64
 }
 
 // update player movement (spaceship)
@@ -102,17 +111,9 @@ func pixelsCollide(bulletX, bulletY, bulletWidth, bulletHeight int,
 	return false
 }
 
-/*
-func pixelsCollide(bulletX, bulletY, bulletWidth1, bulletHeight1 int,
+func (g *Game) CollisionCheck() {
+	var newBullets []Bullet
 
-		enemyX, enemyY int, pixels2 []byte, enemyW, enemyH int) bool {
-
-
-
-		return false
-	}
-*/
-func (g *Game) CollisionCheck(newBullets []Bullet, newEnemies []Enemy) {
 	for _, b := range g.bullets {
 		hit := false
 
@@ -138,7 +139,6 @@ func (g *Game) CollisionCheck(newBullets []Bullet, newEnemies []Enemy) {
 					enemyX, enemyY, ew, eh, g.enemyPixels,
 				) {
 					hit = true
-					log.Printf("Pixel-perfect hit detected at Bullet(%v, %v) and Enemy(%v, %v)", b.x, b.y, e.x, e.y)
 					g.enemies = append(g.enemies[:i], g.enemies[i+1:]...)
 					break
 				}
@@ -154,6 +154,43 @@ func (g *Game) CollisionCheck(newBullets []Bullet, newEnemies []Enemy) {
 	g.bullets = newBullets
 }
 
+func (g *Game) PlayerCollisionCheck() {
+	var newEnemyBullets []Bullet
+	// Get enemy sprite size
+	ew, eh := g.playerImage.Size()
+
+	for _, b := range g.enemyBullets {
+		hit := false
+
+		// First, do a bounding box check for early rejection
+		if b.x+4 > g.x && b.x < g.x+float64(ew) &&
+			b.y+2 > g.y && b.y+2 < g.y+float64(eh) {
+
+			// Convert float positions to integers for pixel collision check
+			bulletX := int(b.x)
+			bulletY := int(b.y)
+			playerX := int(g.x)
+			playerY := int(g.y)
+
+			// Call pixel-perfect collision detection
+			if pixelsCollide(
+				bulletX, bulletY, 4, 2,
+				playerX, playerY, ew, eh, g.playerPixels,
+			) {
+				hit = true
+				log.Println("you have been hit")
+			}
+		}
+
+		// Keep the bullet if no hit occurred
+		if !hit {
+			newEnemyBullets = append(newEnemyBullets, b)
+		}
+	}
+
+	g.enemyBullets = newEnemyBullets
+}
+
 func (g *Game) EnemyMovement() {
 	// Move enemies left
 	for i := range g.enemies {
@@ -161,8 +198,25 @@ func (g *Game) EnemyMovement() {
 	}
 }
 
+func (g *Game) EnemyBullets() {
+	// Make each enemy fire a bullet every 2 seconds (adjust as needed)
+	for _, e := range g.enemies {
+		if rand.Float64() < 0.02 { // ~2% chance per frame
+			var newBullet Bullet
+			newBullet.x = e.x
+			newBullet.y = e.y
+			g.enemyBullets = append(g.enemyBullets, Bullet{x: e.x, y: e.y + 16})
+		}
+	}
+
+	// move bullets
+	for i := range g.enemyBullets {
+		g.enemyBullets[i].x -= 4
+	}
+}
+
 func (g *Game) RemoveOffScreenObjects() {
-	// **Remove off-screen bullets**
+	// **Remove off-screen player bullets**
 	newBullets := g.bullets[:0]
 	for _, b := range g.bullets {
 		if b.y > 0 {
@@ -179,6 +233,16 @@ func (g *Game) RemoveOffScreenObjects() {
 		}
 	}
 	g.enemies = newEnemies
+
+	// remove enemy bullets that are off screen
+	newEnemyBullets := g.enemyBullets[:0]
+	for _, eb := range g.enemyBullets {
+		if eb.x > 0 {
+			newEnemyBullets = append(newEnemyBullets, eb)
+		}
+	}
+	g.enemyBullets = newEnemyBullets
+
 }
 
 // Update handles movement and shooting
@@ -187,11 +251,6 @@ func (g *Game) Update() error {
 		g.extractPixels()
 		g.hadFirstUpdate = true
 	}
-
-	var (
-		newBullets []Bullet
-		newEnemies []Enemy
-	)
 
 	// update player movement
 	g.UpdatePlayer()
@@ -203,30 +262,51 @@ func (g *Game) Update() error {
 	g.firePressed = ebiten.IsKeyPressed(ebiten.KeySpace)
 
 	// Enemy Collision Check
-	g.CollisionCheck(newBullets, newEnemies)
+	g.CollisionCheck()
 
-	// Track the current ticks per second
-	tps := ebiten.ActualTPS()
+	// Check Player Collisions
+	g.PlayerCollisionCheck()
 
-	// Increment the timer based on elapsed time per frame
-	g.enemySpawnTimer += 1 / tps
-
-	// Spawn an enemy every 1.5 seconds
-	if g.enemySpawnTimer >= 1.5 {
-		g.enemies = append(g.enemies, Enemy{
-			y: float64(50 + rand.Intn(480)), // Random Y position
-			x: 480,                          // Spawn to the right of the screen
-		})
-		g.enemySpawnTimer = 0 // Reset the timer
-	}
+	// Enemy spawn management
+	g.EnemySpawn()
 
 	// Move Enemys
 	g.EnemyMovement()
+
+	g.EnemyBullets()
 
 	// remove off screen bullets and enemys
 	g.RemoveOffScreenObjects()
 
 	return nil
+}
+
+func (g *Game) EnemySpawn() {
+	tps := ebiten.ActualTPS()
+
+	// Ensure TPS is valid (avoid dividing by zero)
+	if tps == 0 {
+		tps = 60
+	}
+
+	// Start a delay before first wave
+	if g.enemySpawnTimer < g.initialSpawnDelay {
+		g.enemySpawnTimer += 1 / tps
+		return
+	}
+
+	// Increment timer after the initial delay
+	g.enemySpawnTimer += 1 / tps
+
+	// Spawn a new enemy every 1.5 seconds
+	spawnInterval := 1.5
+	if g.enemySpawnTimer >= spawnInterval {
+		g.enemies = append(g.enemies, Enemy{
+			y: float64(50 + rand.Intn(480)),
+			x: 480,
+		})
+		g.enemySpawnTimer -= spawnInterval // Subtract instead of resetting to 0
+	}
 }
 
 // Draw the player and bullets
@@ -248,36 +328,45 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		ebitenutil.DrawRect(screen, b.x, b.y, 4, 2, color.RGBA{255, 255, 0, 255})
 	}
 
+	// draw enemy bullets
+	for _, eb := range g.enemyBullets {
+		ebitenutil.DrawRect(screen, eb.x, eb.y, 4, 2, color.RGBA{255, 0, 0, 255})
+	}
+
 }
 
 // Layout sets the game window size
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return 640, 480
+	return ScreenWidth, ScreenHight
 }
 
 func main() {
 	// Load sprites
 
 	// player sprite
-	playerImg, _, err := ebitenutil.NewImageFromFile("art/playership.png")
+	playerImg, _, err := ebitenutil.NewImageFromFile(PlayerShipURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// enemy sprite
-	enemyImg, _, err := ebitenutil.NewImageFromFile("art/enemyship.png")
+	enemyImg, _, err := ebitenutil.NewImageFromFile(EnemyShipURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	centerPlayer := (ScreenHight / 2) - playerImg.Bounds().Dy()/2
+
 	game := &Game{
 		playerImage: playerImg,
 		enemyImage:  enemyImg,
-		x:           320,
-		y:           240,
+		x:           50,
+		y:           float64(centerPlayer),
 	}
 
-	ebiten.SetWindowSize(640, 480)
+	log.Printf("test y:%v", game.y)
+
+	ebiten.SetWindowSize(ScreenWidth, ScreenHight)
 	ebiten.SetWindowTitle("pewpew v0.0.1")
 
 	if err := ebiten.RunGame(game); err != nil {
