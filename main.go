@@ -21,17 +21,18 @@ type Enemy struct {
 
 // Game holds the player, bullets, and player position
 type Game struct {
-	hadFirstUpdate  bool
-	playerImage     *ebiten.Image
-	playerPixels    []byte
-	enemyImage      *ebiten.Image
-	enemyPixels     []byte
-	bullets         []Bullet
-	enemyBullets    []Bullet
-	enemies         []Enemy
-	x, y            float64
-	firePressed     bool // Track fire key state
-	enemySpawnTimer float64
+	hadFirstUpdate    bool
+	playerImage       *ebiten.Image
+	playerPixels      []byte
+	enemyImage        *ebiten.Image
+	enemyPixels       []byte
+	bullets           []Bullet
+	enemyBullets      []Bullet
+	enemies           []Enemy
+	x, y              float64
+	firePressed       bool // Track fire key state
+	enemySpawnTimer   float64
+	initialSpawnDelay float64
 }
 
 // update player movement (spaceship)
@@ -259,20 +260,8 @@ func (g *Game) Update() error {
 	// Check Player Collisions
 	g.PlayerCollisionCheck()
 
-	// Track the current ticks per second
-	tps := ebiten.ActualTPS()
-
-	// Increment the timer based on elapsed time per frame
-	g.enemySpawnTimer += 1 / tps
-
-	// Spawn an enemy every 1.5 seconds
-	if g.enemySpawnTimer >= 1.5 {
-		g.enemies = append(g.enemies, Enemy{
-			y: float64(50 + rand.Intn(480)), // Random Y position
-			x: 480,                          // Spawn to the right of the screen
-		})
-		g.enemySpawnTimer = 0 // Reset the timer
-	}
+	// Enemy spawn management
+	g.EnemySpawn()
 
 	// Move Enemys
 	g.EnemyMovement()
@@ -283,6 +272,34 @@ func (g *Game) Update() error {
 	g.RemoveOffScreenObjects()
 
 	return nil
+}
+
+func (g *Game) EnemySpawn() {
+	tps := ebiten.ActualTPS()
+
+	// Ensure TPS is valid (avoid dividing by zero)
+	if tps == 0 {
+		tps = 60
+	}
+
+	// Start a delay before first wave
+	if g.enemySpawnTimer < g.initialSpawnDelay {
+		g.enemySpawnTimer += 1 / tps
+		return
+	}
+
+	// Increment timer after the initial delay
+	g.enemySpawnTimer += 1 / tps
+
+	// Spawn a new enemy every 1.5 seconds
+	spawnInterval := 1.5
+	if g.enemySpawnTimer >= spawnInterval {
+		g.enemies = append(g.enemies, Enemy{
+			y: float64(50 + rand.Intn(480)),
+			x: 480,
+		})
+		g.enemySpawnTimer -= spawnInterval // Subtract instead of resetting to 0
+	}
 }
 
 // Draw the player and bullets
