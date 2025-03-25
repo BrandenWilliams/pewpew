@@ -8,6 +8,7 @@ import (
 )
 
 type EnemyType struct {
+	EType       int
 	Image       *ebiten.Image
 	EnemyPixels []byte
 }
@@ -29,7 +30,7 @@ func (et *EnemyType) TypeOne() (ret EnemyType) {
 		err error
 	)
 
-	ret.Image, _, err = ebitenutil.NewImageFromFile(EnemyShipURL)
+	ret.Image, _, err = ebitenutil.NewImageFromFile(EnemyOneURL)
 	if err != nil {
 		log.Fatal(err)
 	}

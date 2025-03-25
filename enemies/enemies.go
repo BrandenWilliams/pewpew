@@ -9,9 +9,10 @@ import (
 )
 
 const (
-	ScreenWidth  = 960
-	ScreenHight  = 540
-	EnemyShipURL = "art/enemyship.png"
+	ScreenWidth = 960
+	ScreenHight = 540
+	EnemyOneURL = "art/enemyship.png"
+	EnemyTwoURL = "art/enemyTwoShip.png"
 )
 
 // Bullet represents the location of a single shot
@@ -21,7 +22,12 @@ type Bullet struct {
 
 // location of enemy
 type Enemy struct {
-	X, Y float64
+	X, Y, SpeedX, SpeedY, StartY float64
+
+	StepCount   int
+	ZigDuration int
+
+	EnemyType int
 
 	EnemyImage  *ebiten.Image
 	EnemyPixels []byte
@@ -45,13 +51,17 @@ func CreateEnemyLocation(enemyWidth, enemyHeight int) (x, y float64) {
 	return
 }
 
-func (e *Enemies) createEnemy() (newEnemy Enemy) {
+func (e *Enemies) createFirstEnemy() (newEnemy Enemy) {
 	// enemy Sprite
 	var err error
-	newEnemy.EnemyImage, _, err = ebitenutil.NewImageFromFile(EnemyShipURL)
+	newEnemy.EnemyType = 1
+	newEnemy.EnemyImage, _, err = ebitenutil.NewImageFromFile(EnemyOneURL)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	newEnemy.SpeedX = 2
+	newEnemy.SpeedY = 0
 
 	newEnemy.EnemyPixels = e.ET.makeEnemyPixels(newEnemy.EnemyImage)
 
@@ -60,10 +70,47 @@ func (e *Enemies) createEnemy() (newEnemy Enemy) {
 	return
 }
 
-func (e *Enemies) GenerateEnemy(enemyType int) (newEnemy Enemy) {
+func (e *Enemies) createSecondEnemy() (newEnemy Enemy) {
+	// enemy Sprite
+	var err error
+	newEnemy.EnemyType = 2
+
+	newEnemy.EnemyImage, _, err = ebitenutil.NewImageFromFile(EnemyTwoURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	newEnemy.SpeedX = 3
+
+	newEnemy.EnemyPixels = e.ET.makeEnemyPixels(newEnemy.EnemyImage)
+
+	newEnemy.X, newEnemy.Y = CreateEnemyLocation(newEnemy.EnemyImage.Bounds().Dx(), newEnemy.EnemyImage.Bounds().Dy())
+	newEnemy.StartY = newEnemy.Y
+	return
+}
+
+func (e *Enemies) decideEnemyType() (enemyType int) {
+	rando := rand.Intn(100)
+
+	if rando > 95 {
+		enemyType = 2
+		return
+	} else if rando > 80 {
+		enemyType = 2
+		return
+	} else {
+		enemyType = 1
+		return
+	}
+}
+
+func (e *Enemies) GenerateEnemy() (newEnemy Enemy) {
+	enemyType := e.decideEnemyType()
 	switch enemyType {
 	case 1:
-		newEnemy = e.createEnemy()
+		newEnemy = e.createFirstEnemy()
+	case 2:
+		newEnemy = e.createSecondEnemy()
 	}
 
 	return
@@ -89,16 +136,15 @@ func (e *Enemies) EnemySpawn() {
 	// Spawn a new enemy every 1.5 seconds
 	spawnInterval := 1.5
 	if e.enemySpawnTimer >= spawnInterval {
-		newEnemy := e.GenerateEnemy(1)
+		newEnemy := e.GenerateEnemy()
 		e.ES = append(e.ES, newEnemy)
 		e.enemySpawnTimer -= spawnInterval // Subtract instead of resetting to 0
 	}
 }
 
-func (e *Enemies) EnemyMovement() {
-	// Move enemies left
-	for i := range e.ES {
-		e.ES[i].X -= 2 // Adjust speed as needed
+func (e *Enemies) EnemiesMovement() {
+	for i, et := range e.ES {
+		e.ES[i] = e.enemyMovement(et)
 	}
 }
 

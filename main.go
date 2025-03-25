@@ -260,7 +260,7 @@ func (g *Game) Update() error {
 	g.enemies.EnemySpawn()
 
 	// Move Enemys
-	g.enemies.EnemyMovement()
+	g.enemies.EnemiesMovement()
 
 	g.enemies.ManageEnemyBullets()
 
