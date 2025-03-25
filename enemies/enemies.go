@@ -24,6 +24,8 @@ type Bullet struct {
 type Enemy struct {
 	X, Y, SpeedX, SpeedY, StartY float64
 
+	pathing Path
+
 	StepCount   int
 	ZigDuration int
 
@@ -59,14 +61,15 @@ func (e *Enemies) createFirstEnemy() (newEnemy Enemy) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Generate "hitbox" from sprite
+	newEnemy.EnemyPixels = e.ET.makeEnemyPixels(newEnemy.EnemyImage)
 
 	newEnemy.SpeedX = 2
 	newEnemy.SpeedY = 0
-
-	newEnemy.EnemyPixels = e.ET.makeEnemyPixels(newEnemy.EnemyImage)
+	newEnemy.StepCount = 1
 
 	newEnemy.X, newEnemy.Y = CreateEnemyLocation(newEnemy.EnemyImage.Bounds().Dx(), newEnemy.EnemyImage.Bounds().Dy())
-
+	newEnemy.pathing = e.StraightAhead(newEnemy.X, newEnemy.Y, newEnemy.SpeedX)
 	return
 }
 
@@ -79,13 +82,15 @@ func (e *Enemies) createSecondEnemy() (newEnemy Enemy) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	newEnemy.SpeedX = 3
-
+	// Generate "hitbox"
 	newEnemy.EnemyPixels = e.ET.makeEnemyPixels(newEnemy.EnemyImage)
 
+	newEnemy.SpeedX = 3
+	newEnemy.StepCount = 1
+
 	newEnemy.X, newEnemy.Y = CreateEnemyLocation(newEnemy.EnemyImage.Bounds().Dx(), newEnemy.EnemyImage.Bounds().Dy())
-	newEnemy.StartY = newEnemy.Y
+	newEnemy.pathing = e.GenerateZigzagPath(newEnemy.X, newEnemy.Y, newEnemy.SpeedX, 80.0, 0.02)
+
 	return
 }
 
@@ -105,7 +110,9 @@ func (e *Enemies) decideEnemyType() (enemyType int) {
 }
 
 func (e *Enemies) GenerateEnemy() (newEnemy Enemy) {
-	enemyType := e.decideEnemyType()
+	// enemyType := e.decideEnemyType()
+	enemyType := 2
+
 	switch enemyType {
 	case 1:
 		newEnemy = e.createFirstEnemy()
@@ -118,7 +125,6 @@ func (e *Enemies) GenerateEnemy() (newEnemy Enemy) {
 
 func (e *Enemies) EnemySpawn() {
 	tps := ebiten.ActualTPS()
-
 	// Ensure TPS is valid (avoid dividing by zero)
 	if tps == 0 {
 		tps = 60
@@ -143,8 +149,13 @@ func (e *Enemies) EnemySpawn() {
 }
 
 func (e *Enemies) EnemiesMovement() {
+	// bail in no mobs have spawned
+	if len(e.ES) <= 0 {
+		return
+	}
+
 	for i, et := range e.ES {
-		e.ES[i] = e.enemyMovement(et)
+		e.ES[i] = e.NextStep(et)
 	}
 }
 
