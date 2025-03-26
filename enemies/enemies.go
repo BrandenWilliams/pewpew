@@ -1,11 +1,9 @@
 package enemies
 
 import (
-	"log"
 	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 const (
@@ -23,6 +21,8 @@ type Bullet struct {
 // location of enemy
 type Enemy struct {
 	X, Y, SpeedX, SpeedY, StartY float64
+
+	pathing Path
 
 	StepCount   int
 	ZigDuration int
@@ -51,100 +51,19 @@ func CreateEnemyLocation(enemyWidth, enemyHeight int) (x, y float64) {
 	return
 }
 
-func (e *Enemies) createFirstEnemy() (newEnemy Enemy) {
-	// enemy Sprite
-	var err error
-	newEnemy.EnemyType = 1
-	newEnemy.EnemyImage, _, err = ebitenutil.NewImageFromFile(EnemyOneURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	newEnemy.SpeedX = 2
-	newEnemy.SpeedY = 0
-
-	newEnemy.EnemyPixels = e.ET.makeEnemyPixels(newEnemy.EnemyImage)
-
-	newEnemy.X, newEnemy.Y = CreateEnemyLocation(newEnemy.EnemyImage.Bounds().Dx(), newEnemy.EnemyImage.Bounds().Dy())
-
-	return
-}
-
-func (e *Enemies) createSecondEnemy() (newEnemy Enemy) {
-	// enemy Sprite
-	var err error
-	newEnemy.EnemyType = 2
-
-	newEnemy.EnemyImage, _, err = ebitenutil.NewImageFromFile(EnemyTwoURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	newEnemy.SpeedX = 3
-
-	newEnemy.EnemyPixels = e.ET.makeEnemyPixels(newEnemy.EnemyImage)
-
-	newEnemy.X, newEnemy.Y = CreateEnemyLocation(newEnemy.EnemyImage.Bounds().Dx(), newEnemy.EnemyImage.Bounds().Dy())
-	newEnemy.StartY = newEnemy.Y
-	return
-}
-
-func (e *Enemies) decideEnemyType() (enemyType int) {
-	rando := rand.Intn(100)
-
-	if rando > 95 {
-		enemyType = 2
-		return
-	} else if rando > 80 {
-		enemyType = 2
-		return
-	} else {
-		enemyType = 1
-		return
-	}
-}
-
-func (e *Enemies) GenerateEnemy() (newEnemy Enemy) {
-	enemyType := e.decideEnemyType()
-	switch enemyType {
-	case 1:
-		newEnemy = e.createFirstEnemy()
-	case 2:
-		newEnemy = e.createSecondEnemy()
-	}
-
-	return
-}
-
-func (e *Enemies) EnemySpawn() {
-	tps := ebiten.ActualTPS()
-
-	// Ensure TPS is valid (avoid dividing by zero)
-	if tps == 0 {
-		tps = 60
-	}
-
-	// Start a delay before first wave
-	if e.enemySpawnTimer < e.initialSpawnDelay {
-		e.enemySpawnTimer += 1 / tps
-		return
-	}
-
-	// Increment timer after the initial delay
-	e.enemySpawnTimer += 1 / tps
-
-	// Spawn a new enemy every 1.5 seconds
-	spawnInterval := 1.5
-	if e.enemySpawnTimer >= spawnInterval {
-		newEnemy := e.GenerateEnemy()
-		e.ES = append(e.ES, newEnemy)
-		e.enemySpawnTimer -= spawnInterval // Subtract instead of resetting to 0
-	}
-}
-
 func (e *Enemies) EnemiesMovement() {
+	// bail if no mobs have spawned
+	if len(e.ES) <= 0 {
+		return
+	}
+
 	for i, et := range e.ES {
-		e.ES[i] = e.enemyMovement(et)
+		// bail if past last step
+		if e.ES[i].StepCount >= len(et.pathing.Cords) {
+			continue
+		}
+
+		e.ES[i] = e.NextStep(et)
 	}
 }
 

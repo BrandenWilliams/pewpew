@@ -1,36 +1,68 @@
 package enemies
 
-import "math"
+import (
+	"log"
+	"math"
+)
 
-func (g *Enemies) enemyMovement(eIn Enemy) Enemy {
+type Path struct {
+	Cords []CordSet
+}
 
-	switch eIn.EnemyType {
-	case 1:
-		eIn.X = g.straightAhead(eIn.X, eIn.SpeedX)
-	case 2:
-		eIn.X, eIn.Y, eIn.SpeedY, eIn.StepCount = g.zigzagPattern(eIn.X, eIn.Y, eIn.SpeedX, eIn.SpeedY, eIn.StartY, eIn.StepCount)
+type CordSet struct {
+	Step int
+	X, Y float64
+}
+
+func (e *Enemies) NextStep(eIn Enemy) Enemy {
+	newEnemy := eIn
+
+	newEnemy.X = eIn.pathing.Cords[eIn.StepCount].X
+	newEnemy.Y = eIn.pathing.Cords[eIn.StepCount].Y
+	newEnemy.StepCount = eIn.StepCount + 1
+
+	return newEnemy
+}
+
+// Mobs go Stright only
+func (e *Enemies) StraightAhead(startX, fixedY, speedX float64) Path {
+	var path Path
+	stepCount := 0
+
+	for x := startX; x > -200; x -= speedX {
+		stepCount++
+		path.Cords = append(path.Cords, CordSet{Step: stepCount, X: x, Y: fixedY})
 	}
 
-	return eIn
-
+	return path
 }
 
-func (g *Enemies) zigzagPattern(inX, inY, speedX, speedY, startY float64, stepCount int) (newX, newY, newSpeedY float64, newStepCount int) {
-	amplitude := 80.0
-	frequency := 0.02
+// First mob using **temp note**
+// amplitude := 80.0  frequency := 0.02
+func (e *Enemies) GenerateZigzagPath(startX, startY, speedX, amplitude, frequency float64) Path {
+	var path Path
+	stepCount := 0
 
-	// Move horizontally and oscillate vertically
-	newX = inX - speedX
-	newY = startY + amplitude*math.Sin(float64(stepCount)*frequency)
+	// Loop until the enemy moves off-screen
+	for x := startX; x > -200; x -= speedX {
+		stepCount++
+		// create y cord using Sin controlled by amplitude and freq
+		y := startY + amplitude*math.Sin(float64(stepCount)*frequency)
+		// append new set of cords along with step count
+		path.Cords = append(path.Cords, CordSet{Step: stepCount, X: x, Y: y})
+	}
 
-	stepCount++
-	newStepCount = stepCount
-
-	// Return everything, including new speedY to track the direction change
-	return newX, newY, speedY, stepCount
+	return path
 }
 
-func (g *Enemies) straightAhead(inX, speedX float64) (newX float64) {
-	newX = inX - speedX
-	return
+// FOR DEBUGGING PATHING KEEP FOR LATER PATHS
+func PrintPathing(pathing Path) {
+	log.Printf("Pathing START Len count: %v\n", len(pathing.Cords))
+
+	for s, c := range pathing.Cords {
+		log.Printf("Cords step: %v, stepCount: %v, X: %v, Y: %v", s, c.Step, c.X, c.Y)
+	}
+
+	log.Printf("Pathing STOP \n")
+
 }
