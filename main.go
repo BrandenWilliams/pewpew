@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/BrandenWilliams/pewpew/enemies"
+	"github.com/BrandenWilliams/pewpew/enemyprojectiles"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
@@ -24,13 +25,17 @@ type Bullet struct {
 // Game holds the player, bullets, and player position
 type Game struct {
 	hadFirstUpdate bool
-	playerImage    *ebiten.Image
-	playerPixels   []byte
 
-	bullets []Bullet
+	// player stuff to be moved
+	playerImage  *ebiten.Image
+	playerPixels []byte
+	bullets      []Bullet
 
-	enemies   enemies.Enemies
-	enemyType enemies.EnemyType
+	allEnemyPixels enemies.AllEP
+
+	enemies enemies.Enemies
+
+	enemyProjectiles enemyprojectiles.EnemyProjectiles
 
 	x, y        float64
 	firePressed bool // Track fire key state
@@ -81,10 +86,10 @@ func (g *Game) extractPixels() {
 	g.playerPixels = make([]byte, 4*playerPoint.X*playerPoint.Y)
 	g.playerImage.ReadPixels(g.playerPixels)
 
-	newEnemyType := g.enemyType.TypeOne()
-	EnemyPoint := newEnemyType.Image.Bounds().Size()
-	g.enemyType.EnemyPixels = make([]byte, 4*EnemyPoint.X*EnemyPoint.Y)
-	newEnemyType.Image.ReadPixels(g.enemyType.EnemyPixels)
+	var err error
+	if g.allEnemyPixels, err = g.enemies.GetAllEnemyPixels(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // bullet x, y, bullet width, bullet hieght, enemy X posision, enemy Y Posision, enemy width, enemy height and image pixels
@@ -161,13 +166,14 @@ func (g *Game) CollisionCheck() {
 	g.bullets = newBullets
 }
 
+// SWITCH TO EnemyProjectiles
 func (g *Game) PlayerCollisionCheck() {
-	var newEnemyBullets []enemies.Bullet
+	var newEnemyBullets []enemyprojectiles.Bullet
 	// Get enemy sprite size
 	ew, eh := g.playerImage.Size()
 
 	// must iterate through all enmies now that bullets are within enemys
-	for _, b := range g.enemies.EnemyBullets {
+	for _, b := range g.enemyProjectiles.EnemyBullets {
 		hit := false
 
 		// First, do a bounding box check for early rejection
@@ -195,19 +201,7 @@ func (g *Game) PlayerCollisionCheck() {
 		}
 	}
 
-	g.enemies.EnemyBullets = newEnemyBullets
-}
-
-// Remove enemy bullets old enemy bullets in and new enemy bullets.
-func (g *Game) removeEnemyBullets() {
-	var newEnemyBullets []enemies.Bullet
-	for _, eb := range g.enemies.EnemyBullets {
-		if eb.X > 0 {
-			newEnemyBullets = append(newEnemyBullets, eb)
-		}
-	}
-
-	g.enemies.EnemyBullets = newEnemyBullets
+	g.enemyProjectiles.EnemyBullets = newEnemyBullets
 }
 
 // Remove player bullets
@@ -229,7 +223,13 @@ func (g *Game) DespawnOffScreenObjects() {
 	g.enemies.EnemyDespawn()
 
 	// Depsawn Enemy Bullets
-	g.removeEnemyBullets()
+	g.enemyProjectiles.DespawnEnemyProjectiles()
+}
+
+func (g *Game) SpawnEnemyProjectiles() {
+	for _, enemySlice := range g.enemies.ES {
+		g.enemyProjectiles.NewProjectile(enemySlice.X, enemySlice.Y, enemySlice.EnemyType)
+	}
 }
 
 // Update handles movement and shooting
@@ -260,7 +260,7 @@ func (g *Game) Update() error {
 	// Move Enemys
 	g.enemies.EnemiesMovement()
 
-	g.enemies.ManageEnemyBullets()
+	g.enemyProjectiles.ManageEnemyProjectiles()
 
 	// remove off screen bullets and enemys
 	g.DespawnOffScreenObjects()
@@ -288,7 +288,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	// draw enemy bullets
-	for _, eb := range g.enemies.EnemyBullets {
+	for _, eb := range g.enemyProjectiles.EnemyBullets {
 		ebitenutil.DrawRect(screen, eb.X, eb.Y, 4, 2, color.RGBA{255, 0, 0, 255})
 	}
 

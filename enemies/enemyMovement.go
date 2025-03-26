@@ -24,6 +24,17 @@ func (e *Enemies) NextStep(eIn Enemy) Enemy {
 	return newEnemy
 }
 
+func (e *Enemies) GeneratePath(pathingType int, startingX, startingY, speedX, speedY float64) (newPath Path) {
+	switch pathingType {
+	case 1:
+		newPath = e.StraightAhead(startingX, startingY, speedX)
+	case 2:
+		newPath = e.GenerateZigzagPath(startingX, startingY, speedX, 80.0, 0.02)
+	}
+
+	return
+}
+
 // Mobs go Stright only
 func (e *Enemies) StraightAhead(startX, fixedY, speedX float64) Path {
 	var path Path
