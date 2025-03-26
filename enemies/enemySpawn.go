@@ -1,22 +1,33 @@
 package enemies
 
 import (
-	"log"
 	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
-func (e *Enemies) GenerateEnemy() (newEnemy Enemy) {
-	enemyType := e.decideEnemyType()
+func (e *Enemies) CreateEnemy(enemyType EnemyType) (eStruct Enemy) {
 
-	switch enemyType {
-	case 1:
-		newEnemy = e.createFirstEnemy()
-	case 2:
-		newEnemy = e.createSecondEnemy()
-	}
+	eStruct.EnemyImage = enemyType.Image
+
+	eStruct.EnemyType = enemyType.EType
+	eStruct.ProjectileType = enemyType.ProjectileType
+	eStruct.EnemyPixels = enemyType.EnemyPixels
+
+	eStruct.SpeedX = enemyType.SpeedX
+	eStruct.SpeedY = enemyType.SpeedY
+
+	eStruct.StepCount = 1
+
+	eStruct.X, eStruct.Y = CreateEnemyLocation(enemyType.Image.Bounds().Dx(), enemyType.Image.Bounds().Dy())
+	eStruct.Pathing = e.GeneratePath(enemyType.PathingType, eStruct.X, eStruct.Y, eStruct.SpeedX, eStruct.SpeedY)
+	return
+}
+
+func (e *Enemies) GenerateEnemy() (newEnemy Enemy) {
+	enemyTypeInt := e.DecideEnemyType(1)
+	enemyTypeStruct := e.GetEnemyType(enemyTypeInt)
+	newEnemy = e.CreateEnemy(enemyTypeStruct)
 
 	return
 }
@@ -36,7 +47,6 @@ func (e *Enemies) EnemySpawn() {
 
 	// Increment timer after the initial delay
 	e.enemySpawnTimer += 1 / tps
-
 	// Spawn a new enemy every 1.5 seconds
 	spawnInterval := 1.5
 	if e.enemySpawnTimer >= spawnInterval {
@@ -58,7 +68,16 @@ func (e *Enemies) EnemyDespawn() {
 	e.ES = newEnemies
 }
 
-func (e *Enemies) decideEnemyType() (enemyType int) {
+func (e *Enemies) DecideEnemyType(spawnSetup int) (enemyType int) {
+	switch spawnSetup {
+	case 1:
+		enemyType = levelOneSpawn()
+	}
+
+	return
+}
+
+func levelOneSpawn() (enemyType int) {
 	rando := rand.Intn(100)
 
 	if rando > 95 {
@@ -71,45 +90,4 @@ func (e *Enemies) decideEnemyType() (enemyType int) {
 		enemyType = 1
 		return
 	}
-}
-
-func (e *Enemies) createFirstEnemy() (newEnemy Enemy) {
-	// enemy Sprite
-	var err error
-	newEnemy.EnemyType = 1
-	newEnemy.EnemyImage, _, err = ebitenutil.NewImageFromFile(EnemyOneURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Generate "hitbox" from sprite
-	newEnemy.EnemyPixels = e.ET.makeEnemyPixels(newEnemy.EnemyImage)
-
-	newEnemy.SpeedX = 2
-	newEnemy.SpeedY = 0
-	newEnemy.StepCount = 1
-
-	newEnemy.X, newEnemy.Y = CreateEnemyLocation(newEnemy.EnemyImage.Bounds().Dx(), newEnemy.EnemyImage.Bounds().Dy())
-	newEnemy.pathing = e.StraightAhead(newEnemy.X, newEnemy.Y, newEnemy.SpeedX)
-	return
-}
-
-func (e *Enemies) createSecondEnemy() (newEnemy Enemy) {
-	// enemy Sprite
-	var err error
-	newEnemy.EnemyType = 2
-
-	newEnemy.EnemyImage, _, err = ebitenutil.NewImageFromFile(EnemyTwoURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Generate "hitbox"
-	newEnemy.EnemyPixels = e.ET.makeEnemyPixels(newEnemy.EnemyImage)
-
-	newEnemy.SpeedX = 3
-	newEnemy.StepCount = 1
-
-	newEnemy.X, newEnemy.Y = CreateEnemyLocation(newEnemy.EnemyImage.Bounds().Dx(), newEnemy.EnemyImage.Bounds().Dy())
-	newEnemy.pathing = e.GenerateZigzagPath(newEnemy.X, newEnemy.Y, newEnemy.SpeedX, 80.0, 0.02)
-
-	return
 }

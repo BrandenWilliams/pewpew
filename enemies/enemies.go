@@ -13,21 +13,16 @@ const (
 	EnemyTwoURL = "art/enemyTwoShip.png"
 )
 
-// Bullet represents the location of a single shot
-type Bullet struct {
-	X, Y float64
-}
-
 // location of enemy
 type Enemy struct {
 	X, Y, SpeedX, SpeedY, StartY float64
 
-	pathing Path
+	Pathing Path
 
-	StepCount   int
-	ZigDuration int
+	StepCount int
 
-	EnemyType int
+	EnemyType      int
+	ProjectileType int
 
 	EnemyImage  *ebiten.Image
 	EnemyPixels []byte
@@ -36,12 +31,8 @@ type Enemy struct {
 type Enemies struct {
 	ES []Enemy
 
-	EnemyBullets []Bullet
-
 	enemySpawnTimer   float64
 	initialSpawnDelay float64
-
-	ET EnemyType
 }
 
 // long term make this support all enemys
@@ -59,27 +50,10 @@ func (e *Enemies) EnemiesMovement() {
 
 	for i, et := range e.ES {
 		// bail if past last step
-		if e.ES[i].StepCount >= len(et.pathing.Cords) {
+		if e.ES[i].StepCount >= len(et.Pathing.Cords) {
 			continue
 		}
 
 		e.ES[i] = e.NextStep(et)
-	}
-}
-
-func (e *Enemies) ManageEnemyBullets() {
-	// Make each enemy fire a bullet every 2 seconds (adjust as needed)
-	for _, enemySlice := range e.ES {
-
-		if rand.Float64() < 0.02 { // ~2% chance per frame
-
-			e.EnemyBullets = append(e.EnemyBullets, Bullet{X: enemySlice.X, Y: enemySlice.Y + 16})
-		}
-
-	}
-
-	// move bullets
-	for j := range e.EnemyBullets {
-		e.EnemyBullets[j].X -= 3
 	}
 }
