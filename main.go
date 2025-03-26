@@ -6,6 +6,7 @@ import (
 
 	"github.com/BrandenWilliams/pewpew/enemies"
 	"github.com/BrandenWilliams/pewpew/enemyprojectiles"
+	"github.com/BrandenWilliams/pewpew/playership"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
@@ -16,74 +17,31 @@ const (
 	PlayerShipURL = "art/playership.png"
 )
 
-// Bullet represents the location of a single shot
-type Bullet struct {
-	X, Y float64
-}
-
 // Game holds the player, bullets, and player position
 type Game struct {
 	hadFirstUpdate bool
 
-	// player stuff to be moved
-	playerImage  *ebiten.Image
-	playerPixels []byte
-	bullets      []Bullet
+	playerShip playership.PlayerShip
 
-	allEnemyPixels enemies.AllEP
-
-	enemies enemies.Enemies
-
+	allEnemyPixels   enemies.AllEP
+	enemies          enemies.Enemies
 	enemyProjectiles enemyprojectiles.EnemyProjectiles
 
-	x, y        float64
 	firePressed bool // Track fire key state
 }
 
-// update player movement (spaceship)
-func (g *Game) UpdatePlayer() {
-	// Player movement
-	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-		if g.x > 0 {
-			g.x -= 2
-		}
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-		if g.x < float64(ScreenWidth-g.playerImage.Bounds().Dx()-50) {
-			g.x += 2
-		}
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
-		if g.y > 0 {
-			g.y -= 2
-		}
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
-		if g.y < float64(ScreenHight-g.playerImage.Bounds().Dy()) {
-			g.y += 2
-		}
-	}
-}
-
-func (g *Game) BulletUpdate() {
+func (g *Game) ShipBulletUpdate() {
 	// **Shooting (Spacebar, one shot per press)**
 	if ebiten.IsKeyPressed(ebiten.KeySpace) && !g.firePressed {
-		g.bullets = append(g.bullets, Bullet{X: g.x + 122, Y: g.y + 62})
+		g.playerShip.Bullets = append(g.playerShip.Bullets, playership.Bullet{X: g.playerShip.X + 122, Y: g.playerShip.Y + 62})
 	}
 
-	// **Update bullet positions (keep this separate!)**
-	for i := range g.bullets {
-		g.bullets[i].X += 5 // Move bullets up
-	}
+	g.playerShip.MoveShipBullets()
 }
 
 func (g *Game) extractPixels() {
-	playerPoint := g.playerImage.Bounds().Size()
-	g.playerPixels = make([]byte, 4*playerPoint.X*playerPoint.Y)
-	g.playerImage.ReadPixels(g.playerPixels)
+	// Get current Ship pixels later this will update for dmg
+	g.playerShip.GetCurrentShipPixels()
 
 	var err error
 	if g.allEnemyPixels, err = g.enemies.GetAllEnemyPixels(); err != nil {
@@ -123,9 +81,9 @@ func pixelsCollide(bulletX, bulletY, bulletWidth, bulletHeight int,
 }
 
 func (g *Game) CollisionCheck() {
-	var newBullets []Bullet
+	var newBullets []playership.Bullet
 
-	for _, b := range g.bullets {
+	for _, b := range g.playerShip.Bullets {
 		hit := false
 
 		for i := 0; i < len(g.enemies.ES); i++ {
@@ -162,33 +120,33 @@ func (g *Game) CollisionCheck() {
 		}
 	}
 
-	g.bullets = newBullets
+	g.playerShip.Bullets = newBullets
 }
 
 // SWITCH TO EnemyProjectiles
 func (g *Game) PlayerCollisionCheck() {
 	var newEnemyBullets []enemyprojectiles.Bullet
 	// Get enemy sprite size
-	ew, eh := g.playerImage.Size()
+	ew, eh := g.playerShip.PlayerImage.Size()
 
 	// must iterate through all enmies now that bullets are within enemys
 	for _, b := range g.enemyProjectiles.EnemyBullets {
 		hit := false
 
 		// First, do a bounding box check for early rejection
-		if b.X+4 > g.x && b.X < g.x+float64(ew) &&
-			b.Y+2 > g.y && b.Y+2 < g.y+float64(eh) {
+		if b.X+4 > g.playerShip.X && b.X < g.playerShip.X+float64(ew) &&
+			b.Y+2 > g.playerShip.Y && b.Y+2 < g.playerShip.Y+float64(eh) {
 
 			// Convert float positions to integers for pixel collision check
 			bulletX := int(b.X)
 			bulletY := int(b.Y)
-			playerX := int(g.x)
-			playerY := int(g.y)
+			playerX := int(g.playerShip.X)
+			playerY := int(g.playerShip.Y)
 
 			// Call pixel-perfect collision detection
 			if pixelsCollide(
 				bulletX, bulletY, 4, 2,
-				playerX, playerY, ew, eh, g.playerPixels,
+				playerX, playerY, ew, eh, g.playerShip.PlayerPixels,
 			) {
 				hit = true
 			}
@@ -205,13 +163,13 @@ func (g *Game) PlayerCollisionCheck() {
 
 // Remove player bullets
 func (g *Game) removePlayerBullets() {
-	var newBullets []Bullet
-	for _, b := range g.bullets {
+	var newBullets []playership.Bullet
+	for _, b := range g.playerShip.Bullets {
 		if b.X < ScreenWidth {
 			newBullets = append(newBullets, b)
 		}
 	}
-	g.bullets = newBullets
+	g.playerShip.Bullets = newBullets
 }
 
 func (g *Game) DespawnOffScreenObjects() {
@@ -241,10 +199,10 @@ func (g *Game) Update() error {
 	// log.Printf("TPS: %v", ebiten.ActualTPS())
 
 	// update player movement
-	g.UpdatePlayer()
+	g.playerShip.UpdateShipLocation()
 
 	// check for key press & update bullets
-	g.BulletUpdate()
+	g.ShipBulletUpdate()
 
 	// **Track the Space key state**
 	g.firePressed = ebiten.IsKeyPressed(ebiten.KeySpace)
@@ -277,8 +235,8 @@ func (g *Game) Update() error {
 func (g *Game) Draw(screen *ebiten.Image) {
 	// Draw player sprite
 	playerOp := &ebiten.DrawImageOptions{}
-	playerOp.GeoM.Translate(g.x, g.y)
-	screen.DrawImage(g.playerImage, playerOp)
+	playerOp.GeoM.Translate(g.playerShip.X, g.playerShip.Y)
+	screen.DrawImage(g.playerShip.PlayerImage, playerOp)
 
 	// Draw enemy sprite
 	for _, e := range g.enemies.ES {
@@ -288,7 +246,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	// Draw bullets
-	for _, b := range g.bullets {
+	for _, b := range g.playerShip.Bullets {
 		ebitenutil.DrawRect(screen, b.X, b.Y, 4, 2, color.RGBA{255, 255, 0, 255})
 	}
 
@@ -305,8 +263,6 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func main() {
-	// Load sprites
-
 	// player sprite
 	playerImg, _, err := ebitenutil.NewImageFromFile(PlayerShipURL)
 	if err != nil {
@@ -316,9 +272,11 @@ func main() {
 	centerPlayer := (ScreenHight / 2) - playerImg.Bounds().Dy()/2
 
 	game := &Game{
-		playerImage: playerImg,
-		x:           50,
-		y:           float64(centerPlayer),
+		playerShip: playership.PlayerShip{ // Assuming PlayerShip is a struct type
+			PlayerImage: playerImg,
+			X:           50,
+			Y:           float64(centerPlayer),
+		},
 	}
 
 	ebiten.SetWindowSize(ScreenWidth, ScreenHight)
