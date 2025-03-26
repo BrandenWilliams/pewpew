@@ -228,7 +228,7 @@ func (g *Game) DespawnOffScreenObjects() {
 
 func (g *Game) SpawnEnemyProjectiles() {
 	for _, enemySlice := range g.enemies.ES {
-		g.enemyProjectiles.NewProjectile(enemySlice.X, enemySlice.Y, enemySlice.EnemyType)
+		g.enemyProjectiles.NewProjectile(enemySlice.X, enemySlice.Y, enemySlice.ProjectileType)
 	}
 }
 
@@ -257,10 +257,14 @@ func (g *Game) Update() error {
 	// Enemy spawn management
 	g.enemies.EnemySpawn()
 
-	// Move Enemys
-	g.enemies.EnemiesMovement()
-
-	g.enemyProjectiles.ManageEnemyProjectiles()
+	if len(g.enemies.ES) > 0 {
+		// Move Enemys
+		g.enemies.EnemiesMovement()
+		// Spawn Projectiles
+		g.SpawnEnemyProjectiles()
+		// spawn
+		g.enemyProjectiles.ManageEnemyProjectiles()
+	}
 
 	// remove off screen bullets and enemys
 	g.DespawnOffScreenObjects()

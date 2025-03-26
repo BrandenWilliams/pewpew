@@ -1,6 +1,7 @@
 package enemyprojectiles
 
 import (
+	"log"
 	"math/rand/v2"
 )
 
@@ -19,29 +20,30 @@ type EnemyProjectile struct {
 	EnemyBullet Bullet
 }
 
-func (ep *EnemyProjectiles) spawnEnemyBullet(x, y float64) (newBullet Bullet, fired bool) {
+func (ep *EnemyProjectiles) SpawnEnemyBullet(x, y float64) (newBullet Bullet) {
 	if rand.Float64() < 0.02 { // ~2% chance per frame
 		newBullet.X = x
 		newBullet.Y = y + 16
-		fired = true
+		ep.EnemyBullets = append(ep.EnemyBullets, newBullet)
+
 		return
 	}
 
 	return
 }
 
-func (ep *EnemyProjectiles) NewProjectile(x, y float64, projectileType int) (newProjectile EnemyProjectile, fired bool) {
-	fired = false
+func (ep *EnemyProjectiles) NewProjectile(x, y float64, projectileType int) {
 	switch projectileType {
 	case 1:
-		newProjectile.EnemyBullet, fired = ep.spawnEnemyBullet(x, y)
+		ep.SpawnEnemyBullet(x, y)
 		return
 	case 2:
+		log.Printf("BAD BAD BAD projectileType: %v\n", projectileType)
 		// to do
 		return
+	default:
+		return
 	}
-
-	return
 }
 
 func (ep *EnemyProjectiles) ManageEnemyProjectiles() {
@@ -52,14 +54,13 @@ func (ep *EnemyProjectiles) ManageEnemyProjectiles() {
 }
 
 func (ep *EnemyProjectiles) despawnEnemyBullets() {
-
 	var newEnemyBullets []Bullet
 	for _, eb := range ep.EnemyBullets {
 		if eb.X > 0 {
 			newEnemyBullets = append(newEnemyBullets, eb)
 		}
 	}
-
+	log.Printf("bullet size: %v\n", len(newEnemyBullets))
 	ep.EnemyBullets = newEnemyBullets
 }
 
