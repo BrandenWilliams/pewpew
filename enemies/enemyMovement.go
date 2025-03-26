@@ -29,7 +29,7 @@ func (e *Enemies) StraightAhead(startX, fixedY, speedX float64) Path {
 	var path Path
 	stepCount := 0
 
-	for x := startX; x > -50; x -= speedX {
+	for x := startX; x > -200; x -= speedX {
 		stepCount++
 		path.Cords = append(path.Cords, CordSet{Step: stepCount, X: x, Y: fixedY})
 	}
@@ -44,7 +44,7 @@ func (e *Enemies) GenerateZigzagPath(startX, startY, speedX, amplitude, frequenc
 	stepCount := 0
 
 	// Loop until the enemy moves off-screen
-	for x := startX; x > -50; x -= speedX {
+	for x := startX; x > -200; x -= speedX {
 		stepCount++
 		// create y cord using Sin controlled by amplitude and freq
 		y := startY + amplitude*math.Sin(float64(stepCount)*frequency)

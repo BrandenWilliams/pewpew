@@ -46,6 +46,18 @@ func (e *Enemies) EnemySpawn() {
 	}
 }
 
+func (e *Enemies) EnemyDespawn() {
+	var newEnemies []Enemy
+
+	for _, e := range e.ES {
+		if e.X > -150 {
+			newEnemies = append(newEnemies, e)
+		}
+	}
+
+	e.ES = newEnemies
+}
+
 func (e *Enemies) decideEnemyType() (enemyType int) {
 	rando := rand.Intn(100)
 
