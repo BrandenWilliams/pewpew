@@ -63,24 +63,21 @@ func (e *Enemies) GetEnemyType(enemyTypeInt int) (ets EnemyType) {
 
 func (e *Enemies) GetAllEnemyTypes() (enemyTypeList []EnemyType, err error) {
 	enemyTypeList = append(enemyTypeList, makeEnemy(1, 1, 1, 2, 0, EnemyOneURL))
-	enemyTypeList = append(enemyTypeList, makeEnemy(2, 1, 2, 3, 0, EnemyOneURL))
+	enemyTypeList = append(enemyTypeList, makeEnemy(2, 1, 2, 3, 0, EnemyTwoURL))
 
 	return
 }
 
+// EType, Projectile Type, Pathing Type, Speed X, Speed Y, Image URL
 func makeEnemy(eType, projectileType, pathingType int, speedX, speedY float64, ImageURL string) (newEnemy EnemyType) {
 	newEnemy.EType = eType
 	newEnemy.ProjectileType = projectileType
 	newEnemy.PathingType = pathingType
 	newEnemy.SpeedX = speedX
 	newEnemy.SpeedY = speedY
-
-	var err error
-	if newEnemy.Image, _, err = ebitenutil.NewImageFromFile(EnemyOneURL); err != nil {
-		log.Fatal(err)
-	}
-
+	newEnemy.Image = fetchEbitImage(ImageURL)
 	newEnemy.EnemyPixels = makeEnemyPixels(newEnemy.Image)
+
 	return
 }
 
