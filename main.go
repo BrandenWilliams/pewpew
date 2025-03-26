@@ -14,7 +14,6 @@ const (
 	ScreenWidth   = 960
 	ScreenHight   = 540
 	PlayerShipURL = "art/playership.png"
-	EnemyShipURL  = "art/enemyship.png"
 )
 
 // Bullet represents the location of a single shot
