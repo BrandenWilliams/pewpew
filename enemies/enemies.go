@@ -17,7 +17,7 @@ const (
 type Enemy struct {
 	X, Y, SpeedX, SpeedY, StartY float64
 
-	pathing Path
+	Pathing Path
 
 	StepCount int
 
@@ -50,7 +50,7 @@ func (e *Enemies) EnemiesMovement() {
 
 	for i, et := range e.ES {
 		// bail if past last step
-		if e.ES[i].StepCount >= len(et.pathing.Cords) {
+		if e.ES[i].StepCount >= len(et.Pathing.Cords) {
 			continue
 		}
 

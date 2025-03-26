@@ -7,16 +7,20 @@ import (
 )
 
 func (e *Enemies) CreateEnemy(enemyType EnemyType) (eStruct Enemy) {
-	eStruct.X, eStruct.Y = CreateEnemyLocation(enemyType.Image.Bounds().Dx(), enemyType.Image.Bounds().Dy())
-	eStruct.pathing = e.GeneratePath(enemyType.PathingType, eStruct.X, eStruct.Y, eStruct.SpeedX, eStruct.SpeedY)
+
 	eStruct.EnemyImage = enemyType.Image
+
 	eStruct.EnemyType = enemyType.EType
 	eStruct.ProjectileType = enemyType.ProjectileType
 	eStruct.EnemyPixels = enemyType.EnemyPixels
+
 	eStruct.SpeedX = enemyType.SpeedX
 	eStruct.SpeedY = enemyType.SpeedY
+
 	eStruct.StepCount = 1
 
+	eStruct.X, eStruct.Y = CreateEnemyLocation(enemyType.Image.Bounds().Dx(), enemyType.Image.Bounds().Dy())
+	eStruct.Pathing = e.GeneratePath(enemyType.PathingType, eStruct.X, eStruct.Y, eStruct.SpeedX, eStruct.SpeedY)
 	return
 }
 
@@ -43,7 +47,6 @@ func (e *Enemies) EnemySpawn() {
 
 	// Increment timer after the initial delay
 	e.enemySpawnTimer += 1 / tps
-
 	// Spawn a new enemy every 1.5 seconds
 	spawnInterval := 1.5
 	if e.enemySpawnTimer >= spawnInterval {

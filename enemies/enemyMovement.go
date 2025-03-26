@@ -17,8 +17,8 @@ type CordSet struct {
 func (e *Enemies) NextStep(eIn Enemy) Enemy {
 	newEnemy := eIn
 
-	newEnemy.X = eIn.pathing.Cords[eIn.StepCount].X
-	newEnemy.Y = eIn.pathing.Cords[eIn.StepCount].Y
+	newEnemy.X = eIn.Pathing.Cords[eIn.StepCount].X
+	newEnemy.Y = eIn.Pathing.Cords[eIn.StepCount].Y
 	newEnemy.StepCount = eIn.StepCount + 1
 
 	return newEnemy
