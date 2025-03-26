@@ -238,6 +238,8 @@ func (g *Game) Update() error {
 		g.extractPixels()
 		g.hadFirstUpdate = true
 	}
+	// TPS TEST KEEP FOR FUTURE DEBUGG
+	// log.Printf("TPS: %v", ebiten.ActualTPS())
 
 	// update player movement
 	g.UpdatePlayer()
