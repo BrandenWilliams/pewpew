@@ -52,12 +52,17 @@ func CreateEnemyLocation(enemyWidth, enemyHeight int) (x, y float64) {
 }
 
 func (e *Enemies) EnemiesMovement() {
-	// bail in no mobs have spawned
+	// bail if no mobs have spawned
 	if len(e.ES) <= 0 {
 		return
 	}
 
 	for i, et := range e.ES {
+		// bail if past last step
+		if e.ES[i].StepCount >= len(et.pathing.Cords) {
+			continue
+		}
+
 		e.ES[i] = e.NextStep(et)
 	}
 }
