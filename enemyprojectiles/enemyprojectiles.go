@@ -1,7 +1,6 @@
 package enemyprojectiles
 
 import (
-	"log"
 	"math/rand/v2"
 )
 
@@ -38,7 +37,6 @@ func (ep *EnemyProjectiles) NewProjectile(x, y float64, projectileType int) {
 		ep.SpawnEnemyBullet(x, y)
 		return
 	case 2:
-		log.Printf("BAD BAD BAD projectileType: %v\n", projectileType)
 		// to do
 		return
 	default:
@@ -60,7 +58,6 @@ func (ep *EnemyProjectiles) despawnEnemyBullets() {
 			newEnemyBullets = append(newEnemyBullets, eb)
 		}
 	}
-	log.Printf("bullet size: %v\n", len(newEnemyBullets))
 	ep.EnemyBullets = newEnemyBullets
 }
 
