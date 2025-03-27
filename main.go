@@ -275,13 +275,17 @@ func (g *Game) UpdateSpaceShipMode() error {
 	return nil
 }
 
+func (g *Game) UpdateGroundMode() error {
+	return nil
+}
+
 // Update handles movement and shooting
 func (g *Game) Update() error {
 	g.gameMode = 2
 
 	switch g.gameMode {
 	case 1:
-		// DOTO
+		g.UpdateGroundMode()
 	case 2:
 		g.UpdateSpaceShipMode()
 	}
@@ -326,10 +330,15 @@ func (g *Game) DrawShipMode(screen *ebiten.Image) {
 	}
 }
 
+func (g *Game) DrawGroundMode(screen *ebiten.Image) {
+
+}
+
 // Draw the player and bullets
 func (g *Game) Draw(screen *ebiten.Image) {
 	switch g.gameMode {
 	case 1:
+		g.DrawGroundMode(screen)
 	case 2:
 		g.DrawShipMode(screen)
 	}
