@@ -23,13 +23,13 @@ const (
 
 // Game holds the player, bullets, and player position
 type Game struct {
+	gameMode int
+
 	firstUpdate          bool
 	switchMode           bool
 	hadShipFirstUpdate   bool
 	hadGroundFirstUpdate bool
 	hadInsideFirstUpdate bool
-
-	gameMode int
 
 	isDead bool
 
