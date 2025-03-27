@@ -62,7 +62,7 @@ func (e *Enemies) EnemiesMovement() {
 	}
 }
 
-func (g *Enemies) DrawHealthBar(e Enemy, screen *ebiten.Image) {
+func (g *Enemies) DrawEnemyHealthBars(e Enemy, screen *ebiten.Image) {
 	barWidth := e.EnemyImage.Bounds().Dx()
 	barHeight := 5.0 // Height of the health bar
 

@@ -251,7 +251,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		enemyOp := &ebiten.DrawImageOptions{}
 		enemyOp.GeoM.Translate(e.X, e.Y)
 		screen.DrawImage(e.EnemyImage, enemyOp)
-		g.enemies.DrawHealthBar(e, screen)
+		g.enemies.DrawEnemyHealthBars(e, screen)
 	}
 
 	// Draw bullets
