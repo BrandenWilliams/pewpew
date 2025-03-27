@@ -40,19 +40,19 @@ func (ps *PlayerShip) UpdateShipLocation() {
 
 	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
 		if ps.X < float64(ScreenWidth-ps.PlayerImage.Bounds().Dx()-50) {
-			ps.X += 2
+			ps.X += 4
 		}
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
 		if ps.Y > 0 {
-			ps.Y -= 2
+			ps.Y -= 3
 		}
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
 		if ps.Y < float64(ScreenHight-ps.PlayerImage.Bounds().Dy()) {
-			ps.Y += 2
+			ps.Y += 3
 		}
 	}
 }
