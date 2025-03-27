@@ -78,6 +78,11 @@ func (e *Enemies) EnemyDespawn() {
 	e.ES = newEnemies
 }
 
+func (e *Enemies) DespawnAllEnemies() {
+	newEnemy := e.ES[:0]
+	e.ES = newEnemy
+}
+
 func (e *Enemies) DecideEnemyType(spawnSetup int) (enemyType int) {
 	switch spawnSetup {
 	case 1:

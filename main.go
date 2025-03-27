@@ -31,7 +31,8 @@ type Game struct {
 	enemies          enemies.Enemies
 	enemyProjectiles enemyprojectiles.EnemyProjectiles
 
-	firePressed bool // Track fire key state
+	firePressed  bool // Track fire key state
+	enterPressed bool // for respawn
 }
 
 func (g *Game) extractPixels() {
@@ -202,13 +203,24 @@ func (g *Game) SpawnEnemyProjectiles() {
 	}
 }
 
+func (g *Game) RespawnPlayer() {
+	g.playerShip.CurrentPlayerHealth = 10
+	g.playerShip.MaxPlayerHealth = 10
+	g.playerShip.X = 50
+	g.playerShip.Y = (ScreenHight / 2) - (float64(g.playerShip.PlayerImage.Bounds().Dy() / 2))
+}
+
+func (g *Game) DespawnAllBullets() {
+	var newProjectiles enemyprojectiles.EnemyProjectiles
+	g.enemyProjectiles = newProjectiles
+}
+
 // Update handles movement and shooting
 func (g *Game) Update() error {
 	if !g.hadFirstUpdate {
 		g.extractPixels()
 		g.hadFirstUpdate = true
-		g.playerShip.CurrentPlayerHealth = 10
-		g.playerShip.MaxPlayerHealth = 10
+		g.RespawnPlayer()
 	}
 
 	if !g.isDead {
@@ -248,13 +260,23 @@ func (g *Game) Update() error {
 
 		// remove off screen bullets and enemys
 		g.DespawnOffScreenObjects()
+	} else if g.isDead {
+		g.enterPressed = ebiten.IsKeyPressed(ebiten.KeyEnter)
+
+		if g.enterPressed {
+			g.isDead = false
+			g.RespawnPlayer()
+			g.DespawnAllBullets()
+			g.enemies.DespawnAllEnemies()
+			return nil
+		}
 	}
 
 	return nil
 }
 
 func (g *Game) DrawGameOver(screen *ebiten.Image) {
-	msg := "GAME OVER"
+	msg := "GAME OVER\n push enter to try again"
 	text.Draw(screen, msg, basicfont.Face7x13, ScreenWidth/2-len(msg)*7, ScreenHight/2, color.White)
 }
 
