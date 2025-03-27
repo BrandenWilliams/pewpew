@@ -23,11 +23,13 @@ const (
 
 // Game holds the player, bullets, and player position
 type Game struct {
+	gameMode int
+
+	firstUpdate          bool
+	switchMode           bool
 	hadShipFirstUpdate   bool
 	hadGroundFirstUpdate bool
 	hadInsideFirstUpdate bool
-
-	gameMode int
 
 	isDead bool
 
@@ -282,6 +284,12 @@ func (g *Game) UpdateSpaceShipMode() error {
 	return nil
 }
 
+func (g *Game) ClearFirstUpdates() {
+	g.hadGroundFirstUpdate = false
+	g.hadInsideFirstUpdate = false
+	g.hadShipFirstUpdate = false
+}
+
 func (g *Game) UpdateGroundMode() error {
 	if !g.hadGroundFirstUpdate {
 		g.groundPlayer.GetCurrentShipImage()
@@ -307,12 +315,25 @@ func (g *Game) UpdateInsideShipMode() error {
 	// Update Ground Location
 	g.insideShip.UpdateGroundLocation()
 
+	g.gameMode, g.switchMode = g.insideShip.CheckIfCanInteract()
+
+	if g.switchMode {
+		g.ClearFirstUpdates()
+	}
+
 	return nil
 }
 
 // Update handles movement and shooting
 func (g *Game) Update() error {
-	g.gameMode = 0
+	if g.firstUpdate {
+		g.gameMode = 0
+		g.firstUpdate = true
+	}
+
+	if g.switchMode {
+		g.switchMode = false
+	}
 
 	switch g.gameMode {
 	case 0:
@@ -336,8 +357,10 @@ func (g *Game) SetInsideShipBackground(screen *ebiten.Image) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	screen.DrawImage(bgImage, nil) // Draw at (0,0)
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(0.5, 0.5)
+	op.GeoM.Translate(0, 0)
+	screen.DrawImage(bgImage, op) // Draw at (0,0)
 }
 
 func (g *Game) DrawInsideShip(screen *ebiten.Image) {
@@ -359,7 +382,7 @@ func (g *Game) setGroundModeBackground(level int, screen *ebiten.Image) {
 }
 
 func (g *Game) DrawGroundMode(screen *ebiten.Image) {
-	g.setGroundModeBackground(0, screen)
+	// g.setGroundModeBackground(1, screen)
 
 	// Draw player sprite
 	playerOp := &ebiten.DrawImageOptions{}
@@ -401,6 +424,10 @@ func (g *Game) DrawShipMode(screen *ebiten.Image) {
 
 // Draw the player and bullets
 func (g *Game) Draw(screen *ebiten.Image) {
+	if g.switchMode {
+		return
+	}
+
 	switch g.gameMode {
 	case 0:
 		g.DrawInsideShip(screen)
