@@ -40,7 +40,7 @@ func (is *InsideShip) CheckIfCanInteract() (newMode int, hadModeUpdate bool) {
 func (is *InsideShip) SpawnInsideShip() {
 	is.Health = 10
 	is.X = float64(is.PlayerImage.Bounds().Dx()/2 + 20)
-	is.Y = float64(ScreenHight - is.PlayerImage.Bounds().Dy() - 10)
+	is.Y = float64(ScreenHight - is.PlayerImage.Bounds().Dy() - 15)
 }
 
 func (is *InsideShip) GetCurrentGroundPixels() {
