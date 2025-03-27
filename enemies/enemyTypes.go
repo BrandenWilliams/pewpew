@@ -12,6 +12,8 @@ type EnemyType struct {
 
 	SpeedX, SpeedY float64
 
+	HealthBase int
+
 	Image       *ebiten.Image
 	EnemyPixels []byte
 }
@@ -62,19 +64,20 @@ func (e *Enemies) GetEnemyType(enemyTypeInt int) (ets EnemyType) {
 }
 
 func (e *Enemies) GetAllEnemyTypes() (enemyTypeList []EnemyType, err error) {
-	enemyTypeList = append(enemyTypeList, makeEnemy(1, 1, 1, 2, 0, EnemyOneURL))
-	enemyTypeList = append(enemyTypeList, makeEnemy(2, 1, 2, 3, 0, EnemyTwoURL))
+	enemyTypeList = append(enemyTypeList, makeEnemy(1, 1, 1, 2, 0, 2, EnemyOneURL))
+	enemyTypeList = append(enemyTypeList, makeEnemy(2, 1, 2, 3, 0, 1, EnemyTwoURL))
 
 	return
 }
 
 // EType, Projectile Type, Pathing Type, Speed X, Speed Y, Image URL
-func makeEnemy(eType, projectileType, pathingType int, speedX, speedY float64, ImageURL string) (newEnemy EnemyType) {
+func makeEnemy(eType, projectileType, pathingType int, speedX, speedY float64, healthBase int, ImageURL string) (newEnemy EnemyType) {
 	newEnemy.EType = eType
 	newEnemy.ProjectileType = projectileType
 	newEnemy.PathingType = pathingType
 	newEnemy.SpeedX = speedX
 	newEnemy.SpeedY = speedY
+	newEnemy.HealthBase = healthBase
 	newEnemy.Image = fetchEbitImage(ImageURL)
 	newEnemy.EnemyPixels = makeEnemyPixels(newEnemy.Image)
 

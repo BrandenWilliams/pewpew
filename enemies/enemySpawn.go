@@ -9,6 +9,8 @@ import (
 func (e *Enemies) CreateEnemy(enemyType EnemyType) (eStruct Enemy) {
 
 	eStruct.EnemyImage = enemyType.Image
+	eStruct.CurrentHealth = enemyType.HealthBase
+	eStruct.MaxHealth = enemyType.HealthBase
 
 	eStruct.EnemyType = enemyType.EType
 	eStruct.ProjectileType = enemyType.ProjectileType
@@ -30,6 +32,14 @@ func (e *Enemies) GenerateEnemy() (newEnemy Enemy) {
 	newEnemy = e.CreateEnemy(enemyTypeStruct)
 
 	return
+}
+
+// ***DEBUG PURPOSES KEEP***
+func (e *Enemies) SpawnOneEnemy() {
+	if len(e.ES) <= 0 {
+		newEnemy := e.GenerateEnemy()
+		e.ES = append(e.ES, newEnemy)
+	}
 }
 
 func (e *Enemies) EnemySpawn() {
@@ -66,6 +76,11 @@ func (e *Enemies) EnemyDespawn() {
 	}
 
 	e.ES = newEnemies
+}
+
+func (e *Enemies) DespawnAllEnemies() {
+	newEnemy := e.ES[:0]
+	e.ES = newEnemy
 }
 
 func (e *Enemies) DecideEnemyType(spawnSetup int) (enemyType int) {
