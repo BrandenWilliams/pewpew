@@ -14,7 +14,10 @@ const (
 )
 
 type GroundPlayer struct {
-	X, Y float64
+	X, Y      float64
+	onGround  bool
+	isJumping bool
+	VelY      float64
 
 	PlayerImage  *ebiten.Image
 	PlayerPixels []byte
@@ -27,7 +30,7 @@ type GroundPlayer struct {
 func (gp *GroundPlayer) SpawnGroundPlayer() {
 	gp.Health = 10
 	gp.X = float64(gp.PlayerImage.Bounds().Dx() / 2)
-	gp.Y = float64(ScreenHight - gp.PlayerImage.Bounds().Dy() + 20)
+	gp.Y = float64(ScreenHight - gp.PlayerImage.Bounds().Dy() - 15)
 }
 
 func (gp *GroundPlayer) GetCurrentGroundPixels() {
@@ -59,17 +62,53 @@ func (gp *GroundPlayer) UpdateGroundLocation() {
 		}
 	}
 
-	/*
-			if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
-				if gp.Y > 0 {
-					gp.Y -= 3
-				}
-			}
+	gp.CheckJump()
+}
 
-				if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
-			if gp.Y < float64(ScreenHight-gp.PlayerImage.Bounds().Dy()) {
-				gp.Y += 3
+const (
+	gravity    = 0.5
+	jumpForce  = -10
+	maxFallVel = 5
+)
+
+func (gp *GroundPlayer) CheckJump() {
+	groundLevel := float64(ScreenHight - gp.PlayerImage.Bounds().Dy() - 15)
+
+	// Jump input
+	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) && gp.onGround {
+		gp.VelY = jumpForce
+		gp.isJumping = true
+		gp.onGround = false
+	}
+
+	// Apply gravity
+	gp.VelY += gravity
+	if gp.VelY > maxFallVel {
+		gp.VelY = maxFallVel
+	}
+
+	// Update position
+	gp.Y += gp.VelY
+
+	// Check if landed
+	if gp.Y >= groundLevel { // Replace groundLevel with the actual ground Y position
+		gp.Y = groundLevel
+		gp.isJumping = false
+		gp.onGround = true
+		gp.VelY = 0
+	}
+}
+
+/*
+		if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
+			if gp.Y > 0 {
+				gp.Y -= 3
 			}
 		}
-	*/
-}
+
+			if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
+		if gp.Y < float64(ScreenHight-gp.PlayerImage.Bounds().Dy()) {
+			gp.Y += 3
+		}
+	}
+*/
