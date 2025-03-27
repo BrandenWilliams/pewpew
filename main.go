@@ -22,6 +22,7 @@ const (
 // Game holds the player, bullets, and player position
 type Game struct {
 	hadFirstUpdate bool
+	gameMode       int
 
 	isDead bool
 
@@ -215,8 +216,7 @@ func (g *Game) DespawnAllBullets() {
 	g.enemyProjectiles = newProjectiles
 }
 
-// Update handles movement and shooting
-func (g *Game) Update() error {
+func (g *Game) UpdateSpaceShipMode() error {
 	if !g.hadFirstUpdate {
 		g.extractPixels()
 		g.hadFirstUpdate = true
@@ -275,13 +275,26 @@ func (g *Game) Update() error {
 	return nil
 }
 
+// Update handles movement and shooting
+func (g *Game) Update() error {
+	g.gameMode = 2
+
+	switch g.gameMode {
+	case 1:
+		// DOTO
+	case 2:
+		g.UpdateSpaceShipMode()
+	}
+
+	return nil
+}
+
 func (g *Game) DrawGameOver(screen *ebiten.Image) {
 	msg := "GAME OVER\n push enter to try again"
 	text.Draw(screen, msg, basicfont.Face7x13, ScreenWidth/2-len(msg)*7, ScreenHight/2, color.White)
 }
 
-// Draw the player and bullets
-func (g *Game) Draw(screen *ebiten.Image) {
+func (g *Game) DrawShipMode(screen *ebiten.Image) {
 	if g.isDead {
 		g.DrawGameOver(screen)
 		return
@@ -311,7 +324,15 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, eb := range g.enemyProjectiles.EnemyBullets {
 		ebitenutil.DrawRect(screen, eb.X, eb.Y, 4, 2, color.RGBA{255, 0, 0, 255})
 	}
+}
 
+// Draw the player and bullets
+func (g *Game) Draw(screen *ebiten.Image) {
+	switch g.gameMode {
+	case 1:
+	case 2:
+		g.DrawShipMode(screen)
+	}
 }
 
 // Layout sets the game window size
