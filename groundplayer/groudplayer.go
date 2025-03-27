@@ -19,6 +19,8 @@ type GroundPlayer struct {
 	PlayerImage  *ebiten.Image
 	PlayerPixels []byte
 
+	CurrentBackground *ebiten.Image
+
 	Health int
 }
 

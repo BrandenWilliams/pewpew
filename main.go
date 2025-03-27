@@ -7,6 +7,7 @@ import (
 	"github.com/BrandenWilliams/pewpew/enemies"
 	"github.com/BrandenWilliams/pewpew/enemyprojectiles"
 	"github.com/BrandenWilliams/pewpew/groundplayer"
+	"github.com/BrandenWilliams/pewpew/insideship"
 	"github.com/BrandenWilliams/pewpew/playership"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -22,14 +23,17 @@ const (
 
 // Game holds the player, bullets, and player position
 type Game struct {
-	hadShipFirstUpdate, hadGroundFirstUpdate bool
+	hadShipFirstUpdate   bool
+	hadGroundFirstUpdate bool
+	hadInsideFirstUpdate bool
 
 	gameMode int
 
 	isDead bool
 
-	playerShip   playership.PlayerShip
+	insideShip   insideship.InsideShip
 	groundPlayer groundplayer.GroundPlayer
+	playerShip   playership.PlayerShip
 
 	allEnemyPixels   enemies.AllEP
 	enemies          enemies.Enemies
@@ -292,11 +296,27 @@ func (g *Game) UpdateGroundMode() error {
 	return nil
 }
 
+func (g *Game) UpdateInsideShipMode() error {
+	if !g.hadInsideFirstUpdate {
+		g.insideShip.GetCurrentShipImage()
+		g.insideShip.GetCurrentGroundPixels()
+		g.insideShip.SpawnInsideShip()
+		g.hadInsideFirstUpdate = true
+	}
+
+	// Update Ground Location
+	g.insideShip.UpdateGroundLocation()
+
+	return nil
+}
+
 // Update handles movement and shooting
 func (g *Game) Update() error {
-	g.gameMode = 1
+	g.gameMode = 0
 
 	switch g.gameMode {
+	case 0:
+		g.UpdateInsideShipMode()
 	case 1:
 		g.UpdateGroundMode()
 	case 2:
@@ -309,6 +329,42 @@ func (g *Game) Update() error {
 func (g *Game) DrawGameOver(screen *ebiten.Image) {
 	msg := "GAME OVER\n push enter to try again"
 	text.Draw(screen, msg, basicfont.Face7x13, ScreenWidth/2-len(msg)*7, ScreenHight/2, color.White)
+}
+
+func (g *Game) SetInsideShipBackground(screen *ebiten.Image) {
+	bgImage, _, err := ebitenutil.NewImageFromFile("art/insideShip.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	screen.DrawImage(bgImage, nil) // Draw at (0,0)
+}
+
+func (g *Game) DrawInsideShip(screen *ebiten.Image) {
+	g.SetInsideShipBackground(screen)
+
+	// Draw player sprite
+	playerOp := &ebiten.DrawImageOptions{}
+	playerOp.GeoM.Translate(g.insideShip.X, g.insideShip.Y)
+	screen.DrawImage(g.insideShip.PlayerImage, playerOp)
+}
+
+func (g *Game) setGroundModeBackground(level int, screen *ebiten.Image) {
+	switch level {
+	case 1:
+		g.SetInsideShipBackground(screen)
+	case 2:
+	default:
+	}
+}
+
+func (g *Game) DrawGroundMode(screen *ebiten.Image) {
+	g.setGroundModeBackground(0, screen)
+
+	// Draw player sprite
+	playerOp := &ebiten.DrawImageOptions{}
+	playerOp.GeoM.Translate(g.groundPlayer.X, g.groundPlayer.Y)
+	screen.DrawImage(g.groundPlayer.PlayerImage, playerOp)
 }
 
 func (g *Game) DrawShipMode(screen *ebiten.Image) {
@@ -343,16 +399,11 @@ func (g *Game) DrawShipMode(screen *ebiten.Image) {
 	}
 }
 
-func (g *Game) DrawGroundMode(screen *ebiten.Image) {
-	// Draw player sprite
-	playerOp := &ebiten.DrawImageOptions{}
-	playerOp.GeoM.Translate(g.groundPlayer.X, g.groundPlayer.Y)
-	screen.DrawImage(g.groundPlayer.PlayerImage, playerOp)
-}
-
 // Draw the player and bullets
 func (g *Game) Draw(screen *ebiten.Image) {
 	switch g.gameMode {
+	case 0:
+		g.DrawInsideShip(screen)
 	case 1:
 		g.DrawGroundMode(screen)
 	case 2:
@@ -375,7 +426,7 @@ func main() {
 	centerPlayer := (ScreenHight / 2) - playerImg.Bounds().Dy()/2
 
 	game := &Game{
-		playerShip: playership.PlayerShip{ // Assuming PlayerShip is a struct type
+		playerShip: playership.PlayerShip{
 			PlayerImage: playerImg,
 			X:           50,
 			Y:           float64(centerPlayer),
