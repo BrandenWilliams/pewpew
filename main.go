@@ -30,13 +30,6 @@ type Game struct {
 	firePressed bool // Track fire key state
 }
 
-func (g *Game) ShipBulletFire() {
-	// **Shooting (Spacebar, one shot per press)**
-	if ebiten.IsKeyPressed(ebiten.KeySpace) && !g.firePressed {
-		g.playerShip.Bullets = append(g.playerShip.Bullets, playership.Bullet{X: g.playerShip.X + 122, Y: g.playerShip.Y + 62})
-	}
-}
-
 func (g *Game) extractPixels() {
 	// Get current Ship pixels later this will update for dmg
 	g.playerShip.GetCurrentShipPixels()
@@ -44,6 +37,13 @@ func (g *Game) extractPixels() {
 	var err error
 	if g.allEnemyPixels, err = g.enemies.GetAllEnemyPixels(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func (g *Game) ShipBulletFire() {
+	// **Shooting (Spacebar, one shot per press)**
+	if ebiten.IsKeyPressed(ebiten.KeySpace) && !g.firePressed {
+		g.playerShip.Bullets = append(g.playerShip.Bullets, playership.Bullet{X: g.playerShip.X + 122, Y: g.playerShip.Y + 62})
 	}
 }
 
@@ -106,7 +106,14 @@ func (g *Game) CollisionCheck() {
 					enemyX, enemyY, ew, eh, g.enemies.ES[i].EnemyPixels,
 				) {
 					hit = true
-					g.enemies.ES = append(g.enemies.ES[:i], g.enemies.ES[i+1:]...)
+
+					damage := 1
+					g.enemies.ES[i].CurrentHealth -= damage
+
+					if g.enemies.ES[i].CurrentHealth <= 0 {
+						g.enemies.ES = append(g.enemies.ES[:i], g.enemies.ES[i+1:]...)
+					}
+
 					break
 				}
 			}
@@ -201,11 +208,11 @@ func (g *Game) Update() error {
 	// check for key press & update bullets
 	g.ShipBulletFire()
 
-	// move player bullets
-	g.playerShip.MoveShipBullets()
-
 	// **Track the Space key state**
 	g.firePressed = ebiten.IsKeyPressed(ebiten.KeySpace)
+
+	// move player bullets
+	g.playerShip.MoveShipBullets()
 
 	// Enemy Collision Check
 	g.CollisionCheck()
@@ -214,14 +221,15 @@ func (g *Game) Update() error {
 	g.PlayerCollisionCheck()
 
 	// Enemy spawn management
-	g.enemies.EnemySpawn()
+	g.enemies.SpawnOneEnemy()
+	// g.enemies.EnemySpawn()
 
 	if len(g.enemies.ES) > 0 {
 		// Move Enemys
 		g.enemies.EnemiesMovement()
 		// Spawn Projectiles
 		g.SpawnEnemyProjectiles()
-		// spawn
+		// move projectiles
 		g.enemyProjectiles.ManageEnemyProjectiles()
 	}
 
@@ -243,6 +251,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		enemyOp := &ebiten.DrawImageOptions{}
 		enemyOp.GeoM.Translate(e.X, e.Y)
 		screen.DrawImage(e.EnemyImage, enemyOp)
+		g.enemies.DrawHealthBar(e, screen)
 	}
 
 	// Draw bullets
