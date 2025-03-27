@@ -62,7 +62,7 @@ func (gp *GroundPlayer) UpdateGroundLocation() {
 		}
 	}
 
-	gp.CheckJump()
+	gp.ManageJump()
 }
 
 const (
@@ -71,7 +71,7 @@ const (
 	maxFallVel = 5
 )
 
-func (gp *GroundPlayer) CheckJump() {
+func (gp *GroundPlayer) ManageJump() {
 	groundLevel := float64(ScreenHight - gp.PlayerImage.Bounds().Dy() - 15)
 
 	// Jump input
