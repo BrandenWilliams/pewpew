@@ -1,6 +1,7 @@
 package playership
 
 import (
+	"image/color"
 	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -26,7 +27,8 @@ type PlayerShip struct {
 
 	Bullets []Bullet
 
-	PlayerHealth int
+	MaxPlayerHealth     int
+	CurrentPlayerHealth int
 }
 
 // update player movement (spaceship)
@@ -78,4 +80,35 @@ func (ps *PlayerShip) GetCurrentShipPixels() {
 	playerPoint := ps.PlayerImage.Bounds().Size()
 	ps.PlayerPixels = make([]byte, 4*playerPoint.X*playerPoint.Y)
 	ps.PlayerImage.ReadPixels(ps.PlayerPixels)
+}
+
+func (ps *PlayerShip) DrawShipHealth(screen *ebiten.Image) {
+	barWidth := ps.PlayerImage.Bounds().Dx()
+	barHeight := 5.0 // Height of the health bar
+
+	// Calculate the current width based on health
+	healthPercentage := float64(ps.CurrentPlayerHealth) / float64(ps.MaxPlayerHealth)
+	//log.Printf("health %: %v, currentHealth %v, maxHealth %v", healthPercentage, e.CurrentHealth, e.MaxHealth)
+	currentBarWidth := float64(ps.PlayerImage.Bounds().Dx()) * healthPercentage
+
+	// Create a red background bar (full size)
+	healthBarBg := ebiten.NewImage(int(barWidth), int(barHeight))
+	healthBarBg.Fill(color.RGBA{255, 0, 0, 255}) // Red for missing health
+
+	// Draw the background first
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(ps.X, ps.Y)
+	screen.DrawImage(healthBarBg, opts)
+
+	var healthBar *ebiten.Image
+	if currentBarWidth > 0 {
+		// Create a green foreground bar (based on current health)
+		healthBar = ebiten.NewImage(int(currentBarWidth), int(barHeight))
+		healthBar.Fill(color.RGBA{0, 255, 0, 255}) // Green for remaining health
+
+		// Draw the foreground (current health)
+		opts.GeoM.Reset()
+		opts.GeoM.Translate(ps.X, ps.Y)
+		screen.DrawImage(healthBar, opts)
+	}
 }

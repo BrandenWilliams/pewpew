@@ -246,6 +246,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	playerOp.GeoM.Translate(g.playerShip.X, g.playerShip.Y)
 	screen.DrawImage(g.playerShip.PlayerImage, playerOp)
 
+	g.playerShip.DrawShipHealth(screen)
+
 	// Draw enemy sprite
 	for _, e := range g.enemies.ES {
 		enemyOp := &ebiten.DrawImageOptions{}
