@@ -336,8 +336,10 @@ func (g *Game) SetInsideShipBackground(screen *ebiten.Image) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	screen.DrawImage(bgImage, nil) // Draw at (0,0)
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(0.5, 0.5)
+	op.GeoM.Translate(0, 0)
+	screen.DrawImage(bgImage, op) // Draw at (0,0)
 }
 
 func (g *Game) DrawInsideShip(screen *ebiten.Image) {
