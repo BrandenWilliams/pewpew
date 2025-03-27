@@ -6,6 +6,7 @@ import (
 
 	"github.com/BrandenWilliams/pewpew/enemies"
 	"github.com/BrandenWilliams/pewpew/enemyprojectiles"
+	"github.com/BrandenWilliams/pewpew/groundplayer"
 	"github.com/BrandenWilliams/pewpew/playership"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -21,12 +22,14 @@ const (
 
 // Game holds the player, bullets, and player position
 type Game struct {
-	hadFirstUpdate bool
-	gameMode       int
+	hadShipFirstUpdate, hadGroundFirstUpdate bool
+
+	gameMode int
 
 	isDead bool
 
-	playerShip playership.PlayerShip
+	playerShip   playership.PlayerShip
+	groundPlayer groundplayer.GroundPlayer
 
 	allEnemyPixels   enemies.AllEP
 	enemies          enemies.Enemies
@@ -217,9 +220,9 @@ func (g *Game) DespawnAllBullets() {
 }
 
 func (g *Game) UpdateSpaceShipMode() error {
-	if !g.hadFirstUpdate {
+	if !g.hadShipFirstUpdate {
 		g.extractPixels()
-		g.hadFirstUpdate = true
+		g.hadShipFirstUpdate = true
 		g.RespawnPlayer()
 	}
 
@@ -276,12 +279,22 @@ func (g *Game) UpdateSpaceShipMode() error {
 }
 
 func (g *Game) UpdateGroundMode() error {
+	if !g.hadGroundFirstUpdate {
+		g.groundPlayer.GetCurrentShipImage()
+		g.groundPlayer.GetCurrentGroundPixels()
+		g.groundPlayer.SpawnGroundPlayer()
+		g.hadGroundFirstUpdate = true
+	}
+
+	// Update Ground Location
+	g.groundPlayer.UpdateGroundLocation()
+
 	return nil
 }
 
 // Update handles movement and shooting
 func (g *Game) Update() error {
-	g.gameMode = 2
+	g.gameMode = 1
 
 	switch g.gameMode {
 	case 1:
@@ -331,7 +344,10 @@ func (g *Game) DrawShipMode(screen *ebiten.Image) {
 }
 
 func (g *Game) DrawGroundMode(screen *ebiten.Image) {
-
+	// Draw player sprite
+	playerOp := &ebiten.DrawImageOptions{}
+	playerOp.GeoM.Translate(g.groundPlayer.X, g.groundPlayer.Y)
+	screen.DrawImage(g.groundPlayer.PlayerImage, playerOp)
 }
 
 // Draw the player and bullets
