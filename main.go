@@ -9,6 +9,8 @@ import (
 	"github.com/BrandenWilliams/pewpew/playership"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/text"
+	"golang.org/x/image/font/basicfont"
 )
 
 const (
@@ -20,6 +22,8 @@ const (
 // Game holds the player, bullets, and player position
 type Game struct {
 	hadFirstUpdate bool
+
+	isDead bool
 
 	playerShip playership.PlayerShip
 
@@ -152,7 +156,12 @@ func (g *Game) PlayerCollisionCheck() {
 				bulletX, bulletY, 4, 2,
 				playerX, playerY, ew, eh, g.playerShip.PlayerPixels,
 			) {
+				g.playerShip.CurrentPlayerHealth -= 1
 				hit = true
+
+				if g.playerShip.CurrentPlayerHealth <= 0 {
+					g.isDead = true
+				}
 			}
 		}
 
@@ -198,49 +207,64 @@ func (g *Game) Update() error {
 	if !g.hadFirstUpdate {
 		g.extractPixels()
 		g.hadFirstUpdate = true
-	}
-	// TPS TEST KEEP FOR FUTURE DEBUGG
-	// log.Printf("TPS: %v", ebiten.ActualTPS())
-
-	// update player movement
-	g.playerShip.UpdateShipLocation()
-
-	// check for key press & update bullets
-	g.ShipBulletFire()
-
-	// **Track the Space key state**
-	g.firePressed = ebiten.IsKeyPressed(ebiten.KeySpace)
-
-	// move player bullets
-	g.playerShip.MoveShipBullets()
-
-	// Enemy Collision Check
-	g.CollisionCheck()
-
-	// Check Player Collisions
-	g.PlayerCollisionCheck()
-
-	// Enemy spawn management
-	g.enemies.SpawnOneEnemy()
-	// g.enemies.EnemySpawn()
-
-	if len(g.enemies.ES) > 0 {
-		// Move Enemys
-		g.enemies.EnemiesMovement()
-		// Spawn Projectiles
-		g.SpawnEnemyProjectiles()
-		// move projectiles
-		g.enemyProjectiles.ManageEnemyProjectiles()
+		g.playerShip.CurrentPlayerHealth = 10
+		g.playerShip.MaxPlayerHealth = 10
 	}
 
-	// remove off screen bullets and enemys
-	g.DespawnOffScreenObjects()
+	if !g.isDead {
+		// TPS TEST KEEP FOR FUTURE DEBUGG
+		// log.Printf("TPS: %v", ebiten.ActualTPS())
+
+		// update player movement
+		g.playerShip.UpdateShipLocation()
+
+		// check for key press & update bullets
+		g.ShipBulletFire()
+
+		// **Track the Space key state**
+		g.firePressed = ebiten.IsKeyPressed(ebiten.KeySpace)
+
+		// move player bullets
+		g.playerShip.MoveShipBullets()
+
+		// Enemy Collision Check
+		g.CollisionCheck()
+
+		// Check Player Collisions
+		g.PlayerCollisionCheck()
+
+		// Enemy spawn management
+		g.enemies.SpawnOneEnemy()
+		// g.enemies.EnemySpawn()
+
+		if len(g.enemies.ES) > 0 {
+			// Move Enemys
+			g.enemies.EnemiesMovement()
+			// Spawn Projectiles
+			g.SpawnEnemyProjectiles()
+			// move projectiles
+			g.enemyProjectiles.ManageEnemyProjectiles()
+		}
+
+		// remove off screen bullets and enemys
+		g.DespawnOffScreenObjects()
+	}
 
 	return nil
 }
 
+func (g *Game) DrawGameOver(screen *ebiten.Image) {
+	msg := "GAME OVER"
+	text.Draw(screen, msg, basicfont.Face7x13, ScreenWidth/2-len(msg)*7, ScreenHight/2, color.White)
+}
+
 // Draw the player and bullets
 func (g *Game) Draw(screen *ebiten.Image) {
+	if g.isDead {
+		g.DrawGameOver(screen)
+		return
+	}
+
 	// Draw player sprite
 	playerOp := &ebiten.DrawImageOptions{}
 	playerOp.GeoM.Translate(g.playerShip.X, g.playerShip.Y)

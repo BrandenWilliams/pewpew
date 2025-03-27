@@ -2,7 +2,10 @@ module github.com/BrandenWilliams/pewpew
 
 go 1.22.5
 
-require github.com/hajimehoshi/ebiten/v2 v2.8.6
+require (
+	github.com/hajimehoshi/ebiten/v2 v2.8.6
+	golang.org/x/image v0.20.0
+)
 
 require (
 	github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325 // indirect
