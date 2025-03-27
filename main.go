@@ -30,13 +30,11 @@ type Game struct {
 	firePressed bool // Track fire key state
 }
 
-func (g *Game) ShipBulletUpdate() {
+func (g *Game) ShipBulletFire() {
 	// **Shooting (Spacebar, one shot per press)**
 	if ebiten.IsKeyPressed(ebiten.KeySpace) && !g.firePressed {
 		g.playerShip.Bullets = append(g.playerShip.Bullets, playership.Bullet{X: g.playerShip.X + 122, Y: g.playerShip.Y + 62})
 	}
-
-	g.playerShip.MoveShipBullets()
 }
 
 func (g *Game) extractPixels() {
@@ -123,7 +121,6 @@ func (g *Game) CollisionCheck() {
 	g.playerShip.Bullets = newBullets
 }
 
-// SWITCH TO EnemyProjectiles
 func (g *Game) PlayerCollisionCheck() {
 	var newEnemyBullets []enemyprojectiles.Bullet
 	// Get enemy sprite size
@@ -161,17 +158,6 @@ func (g *Game) PlayerCollisionCheck() {
 	g.enemyProjectiles.EnemyBullets = newEnemyBullets
 }
 
-// Remove player bullets
-func (g *Game) removePlayerBullets() {
-	var newBullets []playership.Bullet
-	for _, b := range g.playerShip.Bullets {
-		if b.X < ScreenWidth {
-			newBullets = append(newBullets, b)
-		}
-	}
-	g.playerShip.Bullets = newBullets
-}
-
 func (g *Game) DespawnOffScreenObjects() {
 	// depsawn player bullets
 	g.removePlayerBullets()
@@ -181,6 +167,17 @@ func (g *Game) DespawnOffScreenObjects() {
 
 	// Depsawn Enemy Bullets
 	g.enemyProjectiles.DespawnEnemyProjectiles()
+}
+
+// Remove player bullets
+func (g *Game) removePlayerBullets() {
+	var newBullets []playership.Bullet
+	for _, b := range g.playerShip.Bullets {
+		if b.X < ScreenWidth {
+			newBullets = append(newBullets, b)
+		}
+	}
+	g.playerShip.Bullets = newBullets
 }
 
 func (g *Game) SpawnEnemyProjectiles() {
@@ -202,7 +199,10 @@ func (g *Game) Update() error {
 	g.playerShip.UpdateShipLocation()
 
 	// check for key press & update bullets
-	g.ShipBulletUpdate()
+	g.ShipBulletFire()
+
+	// move player bullets
+	g.playerShip.MoveShipBullets()
 
 	// **Track the Space key state**
 	g.firePressed = ebiten.IsKeyPressed(ebiten.KeySpace)

@@ -21,6 +21,8 @@ type Enemy struct {
 
 	StepCount int
 
+	CurrentHealth int
+
 	EnemyType      int
 	ProjectileType int
 
