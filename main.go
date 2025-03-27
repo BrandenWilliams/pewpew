@@ -292,7 +292,7 @@ func (g *Game) ClearFirstUpdates() {
 
 func (g *Game) UpdateGroundMode() error {
 	if !g.hadGroundFirstUpdate {
-		g.groundPlayer.GetCurrentShipImage()
+		g.groundPlayer.GetCurrentPlayerImage()
 		g.groundPlayer.GetCurrentGroundPixels()
 		g.groundPlayer.SpawnGroundPlayer()
 		g.hadGroundFirstUpdate = true

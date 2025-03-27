@@ -39,7 +39,7 @@ func (gp *GroundPlayer) GetCurrentGroundPixels() {
 	gp.PlayerImage.ReadPixels(gp.PlayerPixels)
 }
 
-func (gp *GroundPlayer) GetCurrentShipImage() {
+func (gp *GroundPlayer) GetCurrentPlayerImage() {
 	// player sprite
 	var err error
 	gp.PlayerImage, _, err = ebitenutil.NewImageFromFile(GroundPlayerURL)
