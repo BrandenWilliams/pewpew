@@ -3,9 +3,11 @@ package main
 import (
 	"image/color"
 	"log"
+	"math"
 
 	"github.com/BrandenWilliams/pewpew/enemies"
 	"github.com/BrandenWilliams/pewpew/enemyprojectiles"
+	"github.com/BrandenWilliams/pewpew/groundlevels"
 	"github.com/BrandenWilliams/pewpew/groundplayer"
 	"github.com/BrandenWilliams/pewpew/insideship"
 	"github.com/BrandenWilliams/pewpew/playership"
@@ -19,6 +21,7 @@ const (
 	ScreenWidth   = 960
 	ScreenHight   = 540
 	PlayerShipURL = "art/playership.png"
+	InsideShipURL = "art/insideShip.png"
 )
 
 // Game holds the player, bullets, and player position
@@ -35,6 +38,7 @@ type Game struct {
 
 	insideShip   insideship.InsideShip
 	groundPlayer groundplayer.GroundPlayer
+	groundLevels groundlevels.GroundLevels
 	playerShip   playership.PlayerShip
 
 	allEnemyPixels   enemies.AllEP
@@ -295,6 +299,7 @@ func (g *Game) UpdateGroundMode() error {
 		g.groundPlayer.GetCurrentPlayerImage()
 		g.groundPlayer.GetCurrentGroundPixels()
 		g.groundPlayer.SpawnGroundPlayer()
+		g.groundLevels.SetFirstLevelBackgrounds()
 		g.hadGroundFirstUpdate = true
 	}
 
@@ -326,8 +331,8 @@ func (g *Game) UpdateInsideShipMode() error {
 
 // Update handles movement and shooting
 func (g *Game) Update() error {
-	if g.firstUpdate {
-		g.gameMode = 0
+	if !g.firstUpdate {
+		g.gameMode = 1
 		g.firstUpdate = true
 	}
 
@@ -347,16 +352,22 @@ func (g *Game) Update() error {
 	return nil
 }
 
+func getEbitImage(imgURL string) (newImg *ebiten.Image) {
+	newImg, _, err := ebitenutil.NewImageFromFile(imgURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return
+}
+
 func (g *Game) DrawGameOver(screen *ebiten.Image) {
 	msg := "GAME OVER\n push enter to try again"
 	text.Draw(screen, msg, basicfont.Face7x13, ScreenWidth/2-len(msg)*7, ScreenHight/2, color.White)
 }
 
 func (g *Game) SetInsideShipBackground(screen *ebiten.Image) {
-	bgImage, _, err := ebitenutil.NewImageFromFile("art/insideShip.png")
-	if err != nil {
-		log.Fatal(err)
-	}
+	bgImage := getEbitImage(InsideShipURL)
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(0.5, 0.5)
 	op.GeoM.Translate(0, 0)
@@ -372,17 +383,44 @@ func (g *Game) DrawInsideShip(screen *ebiten.Image) {
 	screen.DrawImage(g.insideShip.PlayerImage, playerOp)
 }
 
+func (g *Game) getGroundBackground(screen *ebiten.Image) {
+	// Calculate the current background index based on the player position
+	g.groundLevels.CurrentBGIndex = int(g.groundPlayer.LevelPosition) / ScreenWidth
+	if g.groundLevels.CurrentBGIndex >= len(g.groundLevels.GroundImagesURLs) {
+		g.groundLevels.CurrentBGIndex = len(g.groundLevels.GroundImagesURLs) - 1
+	}
+
+	// Draw the current background
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(-math.Mod(float64(g.groundPlayer.LevelPosition), float64(ScreenWidth)), 0)
+	op.GeoM.Scale(0.5, 0.5)
+
+	log.Printf("levelpos: %v, currentBGIndex: %v, mod math: %v", g.groundPlayer.LevelPosition, g.groundLevels.CurrentBGIndex, math.Mod(float64(g.groundPlayer.LevelPosition), float64(ScreenWidth)))
+
+	newGroundLevelImg := getEbitImage(g.groundLevels.GroundImagesURLs[g.groundLevels.CurrentBGIndex])
+	screen.DrawImage(newGroundLevelImg, op)
+
+	// Draw the next background if necessary
+	if g.groundLevels.CurrentBGIndex+1 < len(g.groundLevels.GroundImagesURLs) {
+		op2 := &ebiten.DrawImageOptions{}
+		op2.GeoM.Translate(-math.Mod(float64(g.groundPlayer.LevelPosition), float64(ScreenWidth))+float64(ScreenWidth), 0)
+		op2.GeoM.Scale(0.5, 0.5)
+		newImg := getEbitImage(g.groundLevels.GroundImagesURLs[g.groundLevels.CurrentBGIndex+1])
+		screen.DrawImage(newImg, op2)
+	}
+}
+
 func (g *Game) setGroundModeBackground(level int, screen *ebiten.Image) {
 	switch level {
 	case 1:
-		g.SetInsideShipBackground(screen)
+		g.getGroundBackground(screen)
 	case 2:
 	default:
 	}
 }
 
 func (g *Game) DrawGroundMode(screen *ebiten.Image) {
-	// g.setGroundModeBackground(1, screen)
+	g.setGroundModeBackground(1, screen)
 
 	// Draw player sprite
 	playerOp := &ebiten.DrawImageOptions{}

@@ -14,7 +14,9 @@ const (
 )
 
 type GroundPlayer struct {
-	X, Y      float64
+	X, Y          float64
+	LevelPosition float64
+
 	onGround  bool
 	isJumping bool
 	VelY      float64
@@ -30,6 +32,7 @@ type GroundPlayer struct {
 func (gp *GroundPlayer) SpawnGroundPlayer() {
 	gp.Health = 10
 	gp.X = float64(gp.PlayerImage.Bounds().Dx() / 2)
+	gp.LevelPosition = float64(gp.PlayerImage.Bounds().Dx() / 2)
 	gp.Y = float64(ScreenHight - gp.PlayerImage.Bounds().Dy() - 15)
 }
 
@@ -49,16 +52,23 @@ func (gp *GroundPlayer) GetCurrentPlayerImage() {
 }
 
 func (gp *GroundPlayer) UpdateGroundLocation() {
-	// Player movement
+	// Move left
 	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-		if gp.X > 0 {
-			gp.X -= 2
+		if gp.LevelPosition > 0 {
+			gp.LevelPosition -= 8
+			// Move player only when near the left edge
+			if gp.X > ScreenWidth/4 {
+				gp.X -= 4
+			}
 		}
 	}
 
+	// Move right
 	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-		if gp.X < float64(ScreenWidth-gp.PlayerImage.Bounds().Dx()-50) {
-			gp.X += 2
+		gp.LevelPosition += 8
+		// Move player only when near the right edge
+		if gp.X < 3*ScreenWidth/4 {
+			gp.X += 4
 		}
 	}
 
